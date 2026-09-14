@@ -1,0 +1,15 @@
+import { Heart, Minus, Plus, ShieldCheck, Truck } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { formatINR, getProductPricing } from '../lib/money'
+import { useShop } from '../store/ShopContext'
+
+export default function CartPage() {
+  const { cart, subtotal, updateQuantity, removeFromCart, toggleWishlist } = useShop()
+  const delivery = subtotal >= 1499 ? 0 : 99
+  const mrpTotal = cart.reduce((sum,item) => sum + getProductPricing(item.product).mrp * item.quantity,0)
+  const savings = Math.max(0,mrpTotal-subtotal)
+
+  if (!cart.length) return <div className="empty-state standalone"><h2>Your bag is empty</h2><p>There are a lot of women’s styles waiting for you.</p><Link className="button primary" to="/shop">Start shopping</Link></div>
+
+  return <div className="container cart-page"><div className="page-title"><span className="eyebrow">YOUR SELECTION</span><h1>Shopping bag</h1><p>{cart.length} item{cart.length === 1 ? '' : 's'} saved for checkout.</p></div><div className="cart-layout"><section className="cart-list">{cart.map((item) => { const pricing=getProductPricing(item.product); return <article className="cart-item" key={`${item.product.id}-${item.size}`}><Link to={`/product/${item.product.id}`}><img src={item.product.thumbnail} alt={item.product.title}/></Link><div className="cart-item-copy"><div><strong className="cart-brand">{item.product.brand || 'Veloura Edit'}</strong><Link to={`/product/${item.product.id}`}><h3>{item.product.title}</h3></Link><span>Size: {item.size}</span></div><div className="price-line"><strong>{formatINR(pricing.selling)}</strong>{pricing.discount>0&&<><s>{formatINR(pricing.mrp)}</s><span>{pricing.discount}% off</span></>}</div><div className="cart-item-actions"><div className="quantity"><button onClick={() => updateQuantity(item.product.id,item.size,item.quantity-1)}><Minus size={14}/></button><span>{item.quantity}</span><button onClick={() => updateQuantity(item.product.id,item.size,item.quantity+1)}><Plus size={14}/></button></div><button className="text-link" onClick={() => { toggleWishlist(item.product); removeFromCart(item.product.id,item.size) }}><Heart size={15}/> Move to wishlist</button><button className="text-link danger" onClick={() => removeFromCart(item.product.id,item.size)}>Remove</button></div></div></article>})}</section><aside className="order-summary"><h2>Price details</h2><div><span>Total MRP</span><b>{formatINR(mrpTotal)}</b></div><div className="saving"><span>Discount on MRP</span><b>- {formatINR(savings)}</b></div><div><span>Delivery</span><b>{delivery ? formatINR(delivery) : 'FREE'}</b></div><div className="summary-total"><span>Total amount</span><b>{formatINR(subtotal+delivery)}</b></div><div className="summary-note"><Truck size={17}/><span>Add {formatINR(Math.max(0,1499-subtotal))} more for free delivery</span></div><div className="promo-input"><input placeholder="Coupon code"/><button>APPLY</button></div><Link className="button primary full" to="/checkout">Proceed to checkout</Link><p className="secure-note"><ShieldCheck size={15}/> Secure demo checkout. No payment details are stored.</p></aside></div></div>
+}
