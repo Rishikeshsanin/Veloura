@@ -29,16 +29,32 @@ export function uniqueExternalImages(values: Array<string | null | undefined>) {
   return Array.from(new Set(values.map(normalizeImageUrl).filter(isUsableExternalImage)))
 }
 
-export async function fetchProviderJson<T>(url: string): Promise<T> {
+async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   const controller = new AbortController()
   const timer = window.setTimeout(() => controller.abort(), API_TIMEOUT)
   try {
-    const response = await fetch(url, { signal: controller.signal, headers: { Accept: 'application/json' } })
+    const response = await fetch(url, {
+      ...init,
+      signal: controller.signal,
+      headers: { Accept: 'application/json', ...(init?.headers ?? {}) },
+    })
     if (!response.ok) throw new Error(`${response.status} ${response.statusText}`)
     return await response.json() as T
   } finally {
     window.clearTimeout(timer)
   }
+}
+
+export function fetchProviderJson<T>(url: string): Promise<T> {
+  return requestJson<T>(url)
+}
+
+export function postProviderJson<T>(url: string, payload: unknown): Promise<T> {
+  return requestJson<T>(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
 }
 
 export function stableHash(value: string) {
