@@ -1,3 +1,5 @@
+export type ProductSource = 'dummyjson' | 'fakestore' | 'platzi' | 'makeup' | 'curated'
+
 export type Product = {
   id: number
   title: string
@@ -13,7 +15,8 @@ export type Product = {
   images: string[]
   tags?: string[]
   gender?: 'women'
-  source?: 'api' | 'curated'
+  source?: ProductSource
+  sourceId?: string
   color?: string
   occasion?: string
   sizes?: string[]
