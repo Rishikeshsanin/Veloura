@@ -15,7 +15,7 @@ export function fetchProduct(id: string | number) {
 
 export async function searchProducts(query: string) {
   const local = await searchManagedCatalog(query)
-  if (!query.trim() || local.length >= 60) return local
+  if (!query.trim() || local.length >= 90) return local
 
   const remote = await fetchSearchExpansion(query).catch(() => [])
   const seen = new Set<string>()
@@ -25,7 +25,7 @@ export async function searchProducts(query: string) {
     seen.add(key)
     return true
   })
-  return merged.slice(0,180)
+  return merged.slice(0,300)
 }
 
 export { clearCatalogCache, getCatalogDiagnostics } from './catalog/manager'
