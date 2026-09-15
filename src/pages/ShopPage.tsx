@@ -8,6 +8,7 @@ import { fetchCatalog, fetchCategoryCatalog, searchProducts } from '../lib/api'
 import { getProductPricing } from '../lib/money'
 import type { Product } from '../types'
 
+const PAGE_SIZE = 36
 const sizeOrder = ['XS','S','M','L','XL','XXL','26','28','30','32','34','36','37','38','39','40','41','One Size']
 
 export default function ShopPage() {
@@ -16,7 +17,7 @@ export default function ShopPage() {
   const [loading, setLoading] = useState(true)
   const [expanding, setExpanding] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(false)
-  const [shown, setShown] = useState(30)
+  const [shown, setShown] = useState(PAGE_SIZE)
 
   const category = params.get('category') || ''
   const query = params.get('q') || ''
@@ -80,7 +81,7 @@ export default function ShopPage() {
     return () => { cancelled = true }
   }, [query, category])
 
-  useEffect(() => setShown(30), [category, query, sort, max, rating, discount, brand, size])
+  useEffect(() => setShown(PAGE_SIZE), [category, query, sort, max, rating, discount, brand, size])
 
   const facets = useMemo(() => {
     const brandCounts = new Map<string, number>()
@@ -90,7 +91,7 @@ export default function ShopPage() {
       if (label) brandCounts.set(label, (brandCounts.get(label) || 0) + 1)
       ;(product.sizes ?? []).forEach((value) => sizeCounts.set(value, (sizeCounts.get(value) || 0) + 1))
     })
-    const brands = [...brandCounts.entries()].sort((a,b) => b[1] - a[1]).slice(0,14)
+    const brands = [...brandCounts.entries()].sort((a,b) => b[1] - a[1]).slice(0,18)
     const sizes = [...sizeCounts.entries()].sort((a,b) => {
       const ai = sizeOrder.indexOf(a[0]); const bi = sizeOrder.indexOf(b[0])
       if (ai === -1 && bi === -1) return a[0].localeCompare(b[0])
@@ -131,6 +132,8 @@ export default function ShopPage() {
   }
 
   const activeFilterCount = [max !== 12000, Boolean(rating), Boolean(discount), Boolean(brand), Boolean(size)].filter(Boolean).length
+  const shownCount = Math.min(shown, visible.length)
+  const completion = visible.length ? Math.round((shownCount / visible.length) * 100) : 0
 
   return <div className="shop-page container-wide">
     <div className="breadcrumbs"><Link to="/">Home</Link><span>/</span><span>Women</span>{category && <><span>/</span><span>{categoryLabel(category)}</span></>}</div>
@@ -153,7 +156,11 @@ export default function ShopPage() {
         <button className="button primary mobile-only full" onClick={() => setFiltersOpen(false)}>Show {visible.length} styles</button>
       </aside>
       {filtersOpen && <div className="filter-backdrop mobile-only" onClick={() => setFiltersOpen(false)}/>} 
-      <section className="catalog-column"><div className="product-grid shop-grid">{loading ? Array.from({length: 15}).map((_,i) => <ProductSkeleton key={i} />) : visible.slice(0,shown).map((p) => <ProductCard key={p.id} product={p}/>)}</div>{!loading && visible.length === 0 && <div className="empty-state"><h2>No styles matched</h2><p>Clear a filter and keep exploring.</p><button className="button outline" onClick={clearFilters}>Clear filters</button></div>}{shown < visible.length && <div className="load-more"><span>Showing {Math.min(shown,visible.length)} of {visible.length}</span><button className="button outline" onClick={() => setShown((n) => n + 30)}>Load 30 more</button></div>}</section>
+      <section className="catalog-column" aria-busy={loading || expanding}>
+        <div className="product-grid shop-grid catalog-grid-stage">{loading ? Array.from({length: 18}).map((_,i) => <ProductSkeleton key={i}/>) : visible.slice(0,shown).map((p) => <ProductCard key={p.id} product={p}/>)}</div>
+        {!loading && visible.length === 0 && <div className="empty-state"><span className="empty-mark">V</span><h2>No styles matched</h2><p>Try clearing one filter or exploring another Veloura department.</p><button className="button outline" onClick={clearFilters}>Clear filters</button></div>}
+        {shown < visible.length && <div className="load-more"><div className="load-more-meta"><span>Showing {shownCount.toLocaleString('en-IN')} of {visible.length.toLocaleString('en-IN')} styles</span><b>{completion}% explored</b></div><div className="load-more-track"><i style={{ width: `${completion}%` }} /></div><button className="button outline load-more-button" onClick={() => setShown((n) => n + PAGE_SIZE)}>View {Math.min(PAGE_SIZE, visible.length - shown).toLocaleString('en-IN')} more</button></div>}
+      </section>
     </div>
   </div>
 }
