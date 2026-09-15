@@ -27,7 +27,7 @@ const queries: Array<[string, string]> = [
 async function loadOpenBeautyFacts() {
   const fields = 'code,product_name,brands,categories,categories_tags,quantity,image_url,image_front_url,image_ingredients_url,image_packaging_url'
   const settled = await Promise.allSettled(queries.map(async ([query, category]) => {
-    const url = `https://world.openbeautyfacts.org/api/v2/search?categories_tags_en=${encodeURIComponent(query)}&page_size=36&fields=${fields}`
+    const url = `/catalog-source/openbeauty?categories_tags_en=${encodeURIComponent(query)}&page_size=36&fields=${fields}`
     const payload = await fetchProviderJson<BeautyPayload>(url)
 
     return (payload.products ?? []).map<Product | null>((item) => {
