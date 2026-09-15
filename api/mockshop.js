@@ -1,7 +1,8 @@
 const probeQuery = `query VelouraProbe { shop { name } products(first: 3) { nodes { id title handle productType vendor featuredImage { url } images(first: 3) { nodes { url } } } } }`
 
 export default async function handler(request, response) {
-  const store = String(request.query?.store || '').toLowerCase().trim()
+  const requestUrl = new URL(request.url || '/', 'https://veloura.local')
+  const store = String(requestUrl.searchParams.get('store') || '').toLowerCase().trim()
   if (!/^[a-z0-9-]{1,48}$/.test(store)) {
     return response.status(400).json({ error: 'Invalid mock.shop store' })
   }
