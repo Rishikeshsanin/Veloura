@@ -1,3 +1,9 @@
 {
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "rewrites": [
+    { "source": "/catalog-source/scenesku/:pack", "destination": "https://scenesku.com/api/v1/public-packs/:pack" },
+    { "source": "/catalog-source/solescout", "destination": "https://solescout.ai/api/public/search" },
+    { "source": "/catalog-source/openbeauty", "destination": "https://world.openbeautyfacts.org/api/v2/search" },
+    { "source": "/catalog-source/freeestore", "destination": "https://free-e-store-api.onrender.com/api/v1/products" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }
