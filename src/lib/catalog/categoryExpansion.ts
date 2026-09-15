@@ -1,5 +1,6 @@
 import type { Product } from '../../types'
 import { fetchMockShopCategory } from './providers/mockShopNetwork'
+import { fetchVaanzariEthnic } from './providers/vaanzari'
 import {
   deterministicDiscount,
   deterministicStock,
@@ -223,12 +224,13 @@ export async function fetchCategoryExpansion(category: string): Promise<Product[
   const cached = memoryCache.get(category)
   if (cached && cached.expires > Date.now()) return cached.products
 
-  const [fashion, beauty, shopify] = await Promise.all([
+  const [fashion, beauty, shopify, ethnic] = await Promise.all([
     loadFashionCategory(category),
     loadBeautyCategory(category),
     fetchMockShopCategory(category).catch(() => []),
+    category === 'womens-ethnicwear' ? fetchVaanzariEthnic().catch(() => []) : Promise.resolve([]),
   ])
-  const products = dedupe([...shopify, ...fashion, ...beauty])
+  const products = dedupe([...ethnic, ...shopify, ...fashion, ...beauty])
   memoryCache.set(category, { expires: Date.now() + CATEGORY_CACHE_TTL, products })
   return products
 }
