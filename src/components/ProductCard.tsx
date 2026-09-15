@@ -23,6 +23,7 @@ export default function ProductCard({ product, compact = false }: { product: Pro
   const { mrp, selling, discount } = getProductPricing(product)
   const imageCandidates = useMemo(() => normalizeImages(product), [product])
   const [imageIndex, setImageIndex] = useState(0)
+  const [primaryReady, setPrimaryReady] = useState(false)
   const [secondaryFailed, setSecondaryFailed] = useState(false)
   const [secondaryReady, setSecondaryReady] = useState(false)
   const badge = badgeFor(product)
@@ -30,6 +31,7 @@ export default function ProductCard({ product, compact = false }: { product: Pro
 
   useEffect(() => {
     setImageIndex(0)
+    setPrimaryReady(false)
     setSecondaryFailed(false)
     setSecondaryReady(false)
   }, [product.id])
@@ -38,6 +40,7 @@ export default function ProductCard({ product, compact = false }: { product: Pro
   const secondaryImage = imageCandidates[imageIndex + 1]
 
   const primaryFailed = () => {
+    setPrimaryReady(false)
     setImageIndex((current) => current + 1)
     setSecondaryFailed(false)
     setSecondaryReady(false)
@@ -47,7 +50,8 @@ export default function ProductCard({ product, compact = false }: { product: Pro
     <div className="product-media">
       <Link className="product-image-link" to={productHref} aria-label={product.title}>
         {primaryImage ? <>
-          <img className={`product-image primary-image ${secondaryReady ? 'has-secondary' : ''}`} src={primaryImage} alt={product.title} loading="lazy" decoding="async" onError={primaryFailed} />
+          <div className={`product-image-loading ${primaryReady ? 'hidden' : ''}`} aria-hidden="true"><strong>V</strong><span>VELOURA</span></div>
+          <img className={`product-image primary-image ${primaryReady ? 'primary-ready' : ''} ${secondaryReady ? 'has-secondary' : ''}`} src={primaryImage} alt={product.title} loading="lazy" decoding="async" onLoad={() => setPrimaryReady(true)} onError={primaryFailed} />
           {secondaryImage && !secondaryFailed && <img className={`product-image secondary-image ${secondaryReady ? 'ready' : ''}`} src={secondaryImage} alt="" loading="lazy" decoding="async" onLoad={() => setSecondaryReady(true)} onError={() => { setSecondaryFailed(true); setSecondaryReady(false) }} />}
         </> : <div className="product-image-fallback"><ImageOff size={26} /><strong>VELOURA</strong><span>{categoryLabel(product.category)}</span></div>}
       </Link>
