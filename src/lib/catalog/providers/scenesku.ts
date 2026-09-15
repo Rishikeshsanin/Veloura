@@ -40,7 +40,8 @@ async function loadSceneSku() {
       if (!title || /\bmen'?s\b|\bmens\b/i.test(text)) return null
 
       const category = inferCategory(text, fallbackCategory)
-      const images = uniqueExternalImages((pack.images ?? []).flatMap((image) => [image.image_url, image.thumbnail_url]))
+      const scenes = [...(pack.images ?? [])].sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
+      const images = uniqueExternalImages(scenes.map((scene) => scene.image_url || scene.thumbnail_url))
       const parsedPrice = Number(data.price)
       const seed = stableHash(pack.id || title)
       const sizeOptions = data.options?.Size || data.options?.size
