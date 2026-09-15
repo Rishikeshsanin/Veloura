@@ -52,7 +52,7 @@ const womenSignals = /women|woman|ladies|female|dress|skirt|blouse|top|heel|bag|
 const menSignals = /\bmen'?s\b|\bmens\b|\bmale\b|\bboy\b/i
 
 async function loadFreeEStore() {
-  const payload = await fetchProviderJson<unknown>('https://free-e-store-api.onrender.com/api/v1/products')
+  const payload = await fetchProviderJson<unknown>('/catalog-source/freeestore')
 
   return unwrapArray(payload).map<Product | null>((item) => {
     const title = pickString(item, ['title', 'name', 'productName'])
