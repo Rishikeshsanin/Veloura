@@ -1,7 +1,8 @@
-import { Heart, MapPin, Minus, Plus, ShieldCheck, Star, Truck } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { Heart, ImageOff, MapPin, Minus, Plus, ShieldCheck, Star, Truck } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import ProductRail from '../components/ProductRail'
+import { categoryLabel } from '../data/catalog'
 import { fetchCatalog, fetchProduct } from '../lib/api'
 import { formatINR, getProductPricing } from '../lib/money'
 import { useShop } from '../store/ShopContext'
@@ -15,6 +16,7 @@ export default function ProductPage() {
   const [size, setSize] = useState('M')
   const [qty, setQty] = useState(1)
   const [image, setImage] = useState(0)
+  const [failedImages, setFailedImages] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -27,21 +29,34 @@ export default function ProductPage() {
       }
       setLoading(false)
       setImage(0)
+      setFailedImages([])
     })
   }, [id])
+
+  const galleryImages = useMemo(() => {
+    if (!product) return []
+    return Array.from(new Set([...(product.images ?? []), product.thumbnail].filter(Boolean))).filter((src) => !failedImages.includes(src))
+  }, [product, failedImages])
 
   if (loading) return <div className="container product-loading"><div className="skeleton detail-image-skeleton"/><div className="skeleton detail-copy-skeleton"/></div>
   if (!product) return <div className="empty-state standalone"><h2>That piece moved fast.</h2><p>It is no longer available in the women’s catalog.</p><Link className="button primary" to="/shop">Back to shop</Link></div>
 
-  const images = product.images?.length ? product.images : [product.thumbnail]
   const pricing = getProductPricing(product)
   const wished = isWishlisted(product.id)
+  const activeImage = galleryImages[image] || galleryImages[0]
+  const failImage = (src: string) => {
+    setFailedImages((current) => current.includes(src) ? current : [...current, src])
+    setImage(0)
+  }
 
   return <>
     <div className="container-wide product-page">
-      <div className="breadcrumbs"><Link to="/">Home</Link><span>/</span><Link to={`/shop?category=${product.category}`}>{product.category.replace('womens-','')}</Link><span>/</span><span>{product.title}</span></div>
+      <div className="breadcrumbs"><Link to="/">Home</Link><span>/</span><Link to={`/shop?category=${product.category}`}>{categoryLabel(product.category)}</Link><span>/</span><span>{product.title}</span></div>
       <div className="product-detail">
-        <section className="product-gallery"><div className="thumb-list">{images.slice(0,5).map((src,i) => <button className={i === image ? 'active' : ''} key={src+i} onClick={() => setImage(i)}><img src={src} alt=""/></button>)}</div><div className="main-product-image"><img src={images[image] || product.thumbnail} alt={product.title}/>{pricing.discount > 0 && <span>{pricing.discount}% OFF</span>}</div></section>
+        <section className="product-gallery">
+          <div className="thumb-list">{galleryImages.slice(0,5).map((src,i) => <button className={i === image ? 'active' : ''} key={src} onClick={() => setImage(i)}><img src={src} alt="" onError={() => failImage(src)} /></button>)}</div>
+          <div className="main-product-image">{activeImage ? <img src={activeImage} alt={product.title} onError={() => failImage(activeImage)} /> : <div className="product-detail-fallback"><ImageOff size={32}/><strong>VELOURA</strong><span>{categoryLabel(product.category)}</span></div>}{pricing.discount > 0 && <span>{pricing.discount}% OFF</span>}</div>
+        </section>
         <section className="product-info"><span className="eyebrow">{product.brand || 'VELOURA EDIT'}</span><h1>{product.title}</h1><div className="detail-rating"><span><Star size={15} fill="currentColor"/> {(product.rating ?? 4.5).toFixed(1)}</span><b>{product.reviews?.length || 128} ratings</b></div><p className="detail-description">{product.description}</p><div className="detail-price"><strong>{formatINR(pricing.selling)}</strong>{pricing.discount > 0 && <><s>{formatINR(pricing.mrp)}</s><span>({pricing.discount}% OFF)</span></>}</div><small className="tax-note">inclusive of all taxes</small>
 
           <div className="detail-section"><div className="detail-label"><strong>SELECT SIZE</strong><button>SIZE GUIDE</button></div><div className="detail-sizes">{(product.sizes?.length ? product.sizes : ['XS','S','M','L','XL']).map((s) => <button className={s === size ? 'active' : ''} key={s} onClick={() => setSize(s)}>{s}</button>)}</div></div>
