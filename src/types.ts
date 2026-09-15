@@ -1,4 +1,13 @@
-export type ProductSource = 'dummyjson' | 'fakestore' | 'platzi' | 'makeup' | 'curated'
+export type ProductSource =
+  | 'dummyjson'
+  | 'fakestore'
+  | 'platzi'
+  | 'makeup'
+  | 'scenesku'
+  | 'solescout'
+  | 'openbeauty'
+  | 'freeestore'
+  | 'curated'
 
 export type Product = {
   id: number
@@ -17,6 +26,8 @@ export type Product = {
   gender?: 'women'
   source?: ProductSource
   sourceId?: string
+  sourceUrl?: string
+  sourceLabel?: string
   color?: string
   occasion?: string
   sizes?: string[]
