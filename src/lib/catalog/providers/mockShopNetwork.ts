@@ -39,7 +39,7 @@ type MockShopResponse = {
 
 const productsQuery = `
   query VelouraCatalog {
-    products(first: 80) {
+    products(first: 100) {
       nodes {
         id
         title
@@ -59,7 +59,7 @@ const productsQuery = `
 
 const directoryCache: { expires: number; entries: DirectoryEntry[] } = { expires: 0, entries: [] }
 const storeCache = new Map<string, { expires: number; products: Product[] }>()
-const CACHE_TTL = 30 * 60 * 1000
+const CACHE_TTL = 45 * 60 * 1000
 
 const generalKeywords = [
   'woman', 'women', 'apparel', 'fashion', 'clothing', 'dress', 'blouse', 'trouser',
@@ -176,12 +176,12 @@ async function loadRankedStores(keywords: string[], maxStores: number) {
 }
 
 async function loadMockShopNetwork() {
-  return loadRankedStores(generalKeywords, 5)
+  return loadRankedStores(generalKeywords, 8)
 }
 
 export async function fetchMockShopCategory(category: string) {
   const keywords = categoryKeywords[category] ?? ['women', 'fashion']
-  const products = await loadRankedStores(keywords, 4)
+  const products = await loadRankedStores(keywords, 8)
   return products.filter((product) => product.category === category)
 }
 
