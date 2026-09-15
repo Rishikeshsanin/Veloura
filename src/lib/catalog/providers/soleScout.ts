@@ -74,7 +74,7 @@ const searches: Array<[string, string]> = [
 
 async function loadSoleScout() {
   const settled = await Promise.allSettled(searches.map(async ([query, fallbackCategory]) => {
-    const payload = await fetchProviderJson<unknown>(`https://solescout.ai/api/public/search?q=${encodeURIComponent(query)}&limit=24`)
+    const payload = await fetchProviderJson<unknown>(`/catalog-source/solescout?q=${encodeURIComponent(query)}&limit=24`)
 
     return unwrapArray(payload).map<Product | null>((item) => {
       const title = pickString(item, ['title', 'name', 'product_name', 'model'])
