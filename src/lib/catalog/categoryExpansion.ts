@@ -148,19 +148,26 @@ function normalizeSoleScout(item: LooseObject, category: string): Product | null
   }
 }
 
-async function loadFashionCategory(category: string) {
-  const terms = FASHION_TERMS[category] ?? []
-  if (!terms.length) return []
-
-  const requests = terms.flatMap((term) => [1, 2, 3].map(async (page) => {
+async function loadSoleScoutBatch(terms: string[], pages: number[], category: string) {
+  const requests = terms.flatMap((term) => pages.map(async (page) => {
     const payload = await fetchProviderJson<SoleScoutPayload>(
       `/catalog-source/solescout?q=${encodeURIComponent(term)}&page=${page}&limit=25`,
     )
     return (payload.results ?? []).map((item) => normalizeSoleScout(item, category)).filter((item): item is Product => Boolean(item))
   }))
-
   const settled = await Promise.allSettled(requests)
   return settled.flatMap((result) => result.status === 'fulfilled' ? result.value : [])
+}
+
+async function loadFashionCategory(category: string) {
+  const terms = FASHION_TERMS[category] ?? []
+  if (!terms.length) return []
+
+  const firstPass = await loadSoleScoutBatch(terms, [1, 2], category)
+  if (firstPass.length >= 88) return firstPass
+
+  const finalPass = await loadSoleScoutBatch(terms, [3], category)
+  return [...firstPass, ...finalPass]
 }
 
 function normalizeBeauty(item: BeautyProduct, category: string): Product | null {
@@ -191,17 +198,26 @@ function normalizeBeauty(item: BeautyProduct, category: string): Product | null 
   }
 }
 
-async function loadBeautyCategory(category: string) {
-  const terms = BEAUTY_TERMS[category] ?? []
-  if (!terms.length) return []
+async function loadBeautyBatch(terms: string[], pages: number[], category: string) {
   const fields = 'code,product_name,brands,categories,quantity,image_url,image_front_url,image_ingredients_url,image_packaging_url'
-  const requests = terms.flatMap((term) => [1, 2].map(async (page) => {
+  const requests = terms.flatMap((term) => pages.map(async (page) => {
     const url = `/catalog-source/openbeauty?categories_tags_en=${encodeURIComponent(term)}&page=${page}&page_size=60&fields=${fields}`
     const payload = await fetchProviderJson<BeautyPayload>(url)
     return (payload.products ?? []).map((item) => normalizeBeauty(item, category)).filter((item): item is Product => Boolean(item))
   }))
   const settled = await Promise.allSettled(requests)
   return settled.flatMap((result) => result.status === 'fulfilled' ? result.value : [])
+}
+
+async function loadBeautyCategory(category: string) {
+  const terms = BEAUTY_TERMS[category] ?? []
+  if (!terms.length) return []
+
+  const firstPass = await loadBeautyBatch(terms, [1], category)
+  if (firstPass.length >= 88) return firstPass
+
+  const finalPass = await loadBeautyBatch(terms, [2], category)
+  return [...firstPass, ...finalPass]
 }
 
 function dedupe(products: Product[]) {
