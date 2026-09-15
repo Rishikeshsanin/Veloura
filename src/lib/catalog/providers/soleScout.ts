@@ -62,26 +62,36 @@ function collectImages(item: LooseObject) {
 const menSignals = /\bmen'?s\b|\bmens\b|\bmale\b|\bboy\b/i
 
 const searches: Array<[string, string]> = [
-  ['women sneakers', 'womens-shoes'],
-  ['wmns shoes', 'womens-shoes'],
-  ['women bags', 'womens-bags'],
   ['women dress', 'womens-dresses'],
-  ['women skirt', 'womens-bottoms'],
+  ['women blouse', 'womens-tops'],
+  ['women trousers', 'womens-bottoms'],
+  ['women jeans', 'womens-denim'],
   ['women jacket', 'womens-outerwear'],
-  ['women apparel', 'womens-tops'],
+  ['women activewear', 'womens-activewear'],
+  ['women swimsuit', 'womens-swimwear'],
+  ['women lingerie', 'womens-lingerie'],
+  ['women pajamas', 'womens-sleepwear'],
+  ['women sneakers', 'womens-shoes'],
+  ['women handbag', 'womens-bags'],
+  ['women jewellery', 'womens-jewellery'],
+  ['women watch', 'womens-watches'],
   ['women sunglasses', 'womens-sunglasses'],
+  ['women scarf', 'womens-accessories'],
+  ['women kurta', 'womens-ethnicwear'],
 ]
 
 async function loadSoleScout() {
   const settled = await Promise.allSettled(searches.map(async ([query, fallbackCategory]) => {
-    const payload = await fetchProviderJson<unknown>(`/catalog-source/solescout?q=${encodeURIComponent(query)}&limit=24`)
+    const payload = await fetchProviderJson<unknown>(`/catalog-source/solescout?q=${encodeURIComponent(query)}&page=1&limit=25`)
 
     return unwrapArray(payload).map<Product | null>((item) => {
       const title = pickString(item, ['title', 'name', 'product_name', 'model'])
-      if (!title || menSignals.test(title)) return null
+      const itemGender = pickString(item, ['gender', 'sex'])
+      if (!title || menSignals.test(title) || (itemGender && /men|male|boy/i.test(itemGender) && !/women|female/i.test(itemGender))) return null
       const slug = pickString(item, ['slug', 'style_code', 'sku']) || title
       const category = inferCategory(`${title} ${pickString(item, ['category', 'type'])}`, fallbackCategory)
       const images = collectImages(item)
+      if (!images.length) return null
       const current = pickNumber(item, ['lowest_price_usd', 'price_usd', 'lowest_price', 'price', 'current_price'])
       const retail = pickNumber(item, ['retail_price_usd', 'retail_price', 'msrp', 'original_price'])
       const seed = stableHash(slug)
@@ -99,7 +109,7 @@ async function loadSoleScout() {
         stock: deterministicStock(seed),
         brand: pickString(item, ['brand', 'brand_name', 'manufacturer']) || 'Marketplace Edit',
         sku: pickString(item, ['style_code', 'sku']) || undefined,
-        thumbnail: images[0] ?? '',
+        thumbnail: images[0],
         images,
         tags: ['women', 'marketplace', query],
         gender: 'women',
@@ -107,6 +117,7 @@ async function loadSoleScout() {
         sourceId: slug,
         sourceUrl: pickString(item, ['url', 'product_url']) || `https://solescout.ai/search?q=${encodeURIComponent(title)}`,
         sourceLabel: 'SoleScout discovery',
+        color: pickString(item, ['color', 'colour']) || undefined,
         sizes: sizesForCategory(category),
       }
     }).filter((product): product is Product => Boolean(product))
