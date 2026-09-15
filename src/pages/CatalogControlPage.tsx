@@ -1,5 +1,5 @@
 import { Activity, Database, Images, Layers3, RefreshCw, ShieldCheck } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { WOMEN_CATEGORIES, categoryLabel } from '../data/catalog'
 import { clearCatalogCache, fetchCatalog, getCatalogDiagnostics } from '../lib/api'
 import type { ProviderHealth } from '../lib/catalog/manager'
@@ -69,6 +69,6 @@ export default function CatalogControlPage() {
   </div>
 }
 
-function Stat({ icon, label, value, tone = '' }: { icon: React.ReactNode; label: string; value: string; tone?: string }) {
+function Stat({ icon, label, value, tone = '' }: { icon: ReactNode; label: string; value: string; tone?: string }) {
   return <div className={`control-stat ${tone}`}>{icon}<div><span>{label}</span><strong>{value}</strong></div></div>
 }
