@@ -7,7 +7,7 @@ import { catalogProviders, isUsableImage, normalizeImageUrl } from './providers'
 import type { ManagedProvider } from './providers/shared'
 
 const ALLOWED_CATEGORIES = new Set(WOMEN_CATEGORIES.map((category) => category.value))
-const CACHE_KEY = 'veloura:catalog:v10'
+const CACHE_KEY = 'veloura:catalog:v11'
 const CACHE_TTL = 15 * 60 * 1000
 const CATEGORY_LIMIT = 160
 const CATEGORY_CACHE_TTL = 30 * 60 * 1000
@@ -36,9 +36,6 @@ function imageIdentity(url: string) {
     const parsed = new URL(normalizeImageUrl(url))
     parsed.hash = ''
 
-    // Remove only visual-transform parameters. Product identity parameters such as
-    // SoleScout's ?slug=...&sku=... MUST stay or thousands of distinct images
-    // collapse into one /api/goat-image identity.
     const transformParams = new Set([
       'w', 'width', 'h', 'height', 'q', 'quality', 'auto', 'fit', 'crop',
       'fm', 'format', 'dpr', 'ixlib', 'rect', 'cs', 'bg', 'sat', 'con',
@@ -64,6 +61,7 @@ function qualityScore(product: Product) {
   const sourceWeight: Record<string, number> = {
     scenesku: 52,
     mockshop: 46,
+    vaanzari: 44,
     solescout: 36,
     dummyjson: 31,
     openbeauty: 29,
