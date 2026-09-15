@@ -1,6 +1,6 @@
 import type { Product } from '../../../types'
 
-export const API_TIMEOUT = 12000
+export const API_TIMEOUT = 8500
 
 export type ManagedProvider = {
   id: string
