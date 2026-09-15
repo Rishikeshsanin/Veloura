@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import ProductCard from '../components/ProductCard'
 import { WOMEN_CATEGORIES, categoryLabel } from '../data/catalog'
-import { fetchCatalog, searchProducts } from '../lib/api'
+import { fetchCatalog, fetchCategoryCatalog, searchProducts } from '../lib/api'
 import { getProductPricing } from '../lib/money'
 import type { Product } from '../types'
 
@@ -12,7 +12,7 @@ export default function ShopPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [filtersOpen, setFiltersOpen] = useState(false)
-  const [shown, setShown] = useState(24)
+  const [shown, setShown] = useState(30)
 
   const category = params.get('category') || ''
   const query = params.get('q') || ''
@@ -22,18 +22,33 @@ export default function ShopPage() {
   const discount = Number(params.get('discount') || 0)
 
   useEffect(() => {
+    let cancelled = false
     setLoading(true)
-    ;(query ? searchProducts(query) : fetchCatalog()).then((items) => {
+
+    const request = query
+      ? searchProducts(query)
+      : category
+        ? fetchCategoryCatalog(category)
+        : fetchCatalog()
+
+    request.then((items) => {
+      if (cancelled) return
       setProducts(items)
       setLoading(false)
+    }).catch(() => {
+      if (cancelled) return
+      setProducts([])
+      setLoading(false)
     })
-  }, [query])
 
-  useEffect(() => setShown(24), [category, query, sort, max, rating, discount])
+    return () => { cancelled = true }
+  }, [query, category])
+
+  useEffect(() => setShown(30), [category, query, sort, max, rating, discount])
 
   const visible = useMemo(() => {
     let items = [...products]
-    if (category) items = items.filter((p) => p.category === category)
+    if (category && query) items = items.filter((p) => p.category === category)
     items = items.filter((p) => getProductPricing(p).selling <= max)
     if (rating) items = items.filter((p) => (p.rating ?? 0) >= rating)
     if (discount) items = items.filter((p) => (p.discountPercentage ?? 0) >= discount)
@@ -43,7 +58,7 @@ export default function ShopPage() {
     if (sort === 'discount') items.sort((a,b) => (b.discountPercentage ?? 0) - (a.discountPercentage ?? 0))
     if (sort === 'new') items.sort((a,b) => b.id - a.id)
     return items
-  }, [products, category, max, rating, discount, sort])
+  }, [products, category, query, max, rating, discount, sort])
 
   const update = (key: string, value: string) => {
     const next = new URLSearchParams(params)
@@ -53,13 +68,13 @@ export default function ShopPage() {
 
   return <div className="shop-page container-wide">
     <div className="breadcrumbs"><Link to="/">Home</Link><span>/</span><span>Women</span>{category && <><span>/</span><span>{categoryLabel(category)}</span></>}</div>
-    <section className="shop-hero"><div><span className="eyebrow">WOMEN'S STORE</span><h1>{query ? `Search: “${query}”` : category ? categoryLabel(category) : 'Women’s fashion'}</h1><p>Dresses, tops, co-ords, ethnic wear, footwear, bags, jewellery and beauty—curated only for women.</p></div><div className="catalog-count"><strong>{loading ? '—' : visible.length}</strong><span>styles</span></div></section>
+    <section className="shop-hero"><div><span className="eyebrow">WOMEN'S STORE</span><h1>{query ? `Search: “${query}”` : category ? categoryLabel(category) : 'Women’s fashion'}</h1><p>{category ? `A deeper ${categoryLabel(category).toLowerCase()} collection pulled from Veloura’s managed marketplace network.` : 'Dresses, tops, co-ords, ethnic wear, footwear, bags, jewellery, beauty and more—curated only for women.'}</p></div><div className="catalog-count"><strong>{loading ? '—' : visible.length}</strong><span>styles</span></div></section>
 
     <div className="category-chip-row"><Link className={!category ? 'active' : ''} to="/shop">All women</Link>{WOMEN_CATEGORIES.map((item) => <Link className={category === item.value ? 'active' : ''} key={item.value} to={`/shop?category=${item.value}`}>{item.shortLabel || item.label}</Link>)}</div>
 
     <div className="quick-filter-row"><button onClick={() => setFiltersOpen(true)}><SlidersHorizontal size={16}/> Filters</button><button className={rating >= 4.5 ? 'active' : ''} onClick={() => update('rating', rating >= 4.5 ? '' : '4.5')}><Sparkles size={14}/> Top rated</button><button className={discount >= 40 ? 'active' : ''} onClick={() => update('discount', discount >= 40 ? '' : '40')}>40%+ off</button><button className={max === 999 ? 'active' : ''} onClick={() => update('max', max === 999 ? '' : '999')}>Under ₹999</button><button className={max === 1499 ? 'active' : ''} onClick={() => update('max', max === 1499 ? '' : '1499')}>Under ₹1,499</button></div>
 
-    <div className="shop-toolbar"><span>{loading ? 'Loading women’s store…' : `${visible.length} styles found`}</span><label>Sort by <select value={sort} onChange={(e) => update('sort', e.target.value)}><option value="featured">Recommended</option><option value="new">What’s new</option><option value="rating">Customer rating</option><option value="discount">Better discount</option><option value="price-low">Price: low to high</option><option value="price-high">Price: high to low</option></select><ChevronDown size={15}/></label></div>
+    <div className="shop-toolbar"><span>{loading ? category ? `Building the ${categoryLabel(category)} collection…` : 'Loading women’s store…' : `${visible.length} styles found`}</span><label>Sort by <select value={sort} onChange={(e) => update('sort', e.target.value)}><option value="featured">Recommended</option><option value="new">What’s new</option><option value="rating">Customer rating</option><option value="discount">Better discount</option><option value="price-low">Price: low to high</option><option value="price-high">Price: high to low</option></select><ChevronDown size={15}/></label></div>
 
     <div className="shop-layout">
       <aside className={`filters ${filtersOpen ? 'open' : ''}`}><div className="filter-head"><strong>FILTERS</strong><button className="text-link" onClick={() => setParams(query ? {q: query} : {})}>CLEAR ALL</button><button className="icon-button mobile-only" onClick={() => setFiltersOpen(false)}><X/></button></div>
@@ -70,7 +85,7 @@ export default function ShopPage() {
         <button className="button primary mobile-only full" onClick={() => setFiltersOpen(false)}>Show {visible.length} styles</button>
       </aside>
       {filtersOpen && <div className="filter-backdrop mobile-only" onClick={() => setFiltersOpen(false)}/>} 
-      <section className="catalog-column"><div className="product-grid shop-grid">{loading ? Array.from({length: 12}).map((_,i) => <div key={i} className="skeleton product-skeleton"/>) : visible.slice(0,shown).map((p) => <ProductCard key={p.id} product={p}/>)}</div>{!loading && visible.length === 0 && <div className="empty-state"><h2>No styles matched</h2><p>Clear a filter and keep exploring.</p></div>}{shown < visible.length && <div className="load-more"><span>Showing {Math.min(shown,visible.length)} of {visible.length}</span><button className="button outline" onClick={() => setShown((n) => n + 24)}>Load more</button></div>}</section>
+      <section className="catalog-column"><div className="product-grid shop-grid">{loading ? Array.from({length: 15}).map((_,i) => <div key={i} className="skeleton product-skeleton"/>) : visible.slice(0,shown).map((p) => <ProductCard key={p.id} product={p}/>)}</div>{!loading && visible.length === 0 && <div className="empty-state"><h2>No styles matched</h2><p>Clear a filter and keep exploring.</p></div>}{shown < visible.length && <div className="load-more"><span>Showing {Math.min(shown,visible.length)} of {visible.length}</span><button className="button outline" onClick={() => setShown((n) => n + 30)}>Load 30 more</button></div>}</section>
     </div>
   </div>
 }
