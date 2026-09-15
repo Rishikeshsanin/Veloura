@@ -34,35 +34,38 @@ type BeautyProduct = {
 
 type BeautyPayload = { products?: BeautyProduct[] }
 
-const TARGET_PER_CATEGORY = 100
-const CATEGORY_CACHE_TTL = 30 * 60 * 1000
+// V5: large marketplace target. The UI still renders in small pages; this is the
+// maximum clean pool we keep after women-only filtering and deduplication.
+const TARGET_PER_CATEGORY = 240
+const CATEGORY_CACHE_TTL = 45 * 60 * 1000
+const EARLY_EXIT_TARGET = 210
 
 const FASHION_TERMS: Record<string, string[]> = {
-  'womens-dresses': ['women dress', 'women maxi dress', 'women mini dress', 'women casual dress'],
-  'womens-tops': ['women top', 'women blouse', 'women shirt', 'women tee'],
-  'womens-coords': ['women matching set', 'women two piece set', 'women outfit set', 'women tracksuit'],
-  'womens-ethnicwear': ['women kurta', 'women saree', 'women salwar', 'women lehenga'],
-  'womens-bottoms': ['women trousers', 'women skirt', 'women pants', 'women shorts'],
-  'womens-denim': ['women jeans', 'women denim', 'women jean jacket', 'women denim shorts'],
-  'womens-outerwear': ['women blazer', 'women jacket', 'women coat', 'women trench'],
-  'womens-activewear': ['women activewear', 'women leggings', 'women sports bra', 'women training'],
-  'womens-winterwear': ['women sweater', 'women cardigan', 'women hoodie', 'women winter jacket'],
-  'womens-swimwear': ['women swimsuit', 'women bikini', 'women swimwear', 'women beachwear'],
-  'womens-lingerie': ['women lingerie', 'women bralette', 'women bra', 'women underwear'],
-  'womens-sleepwear': ['women pajamas', 'women sleepwear', 'women loungewear', 'women nightwear'],
-  'womens-shoes': ['women sneakers', 'women heels', 'women sandals', 'women boots'],
-  'womens-bags': ['women handbag', 'women tote bag', 'women shoulder bag', 'women crossbody'],
-  'womens-jewellery': ['women earrings', 'women necklace', 'women bracelet', 'women ring'],
-  'womens-watches': ['women watch', 'ladies watch', 'women smartwatch', 'women bracelet watch'],
-  'womens-sunglasses': ['women sunglasses', 'women eyewear', 'women shades', 'ladies sunglasses'],
-  'womens-accessories': ['women scarf', 'women belt', 'women cap', 'women accessories'],
+  'womens-dresses': ['women dress', 'women maxi dress', 'women midi dress', 'women mini dress', 'women party dress', 'women casual dress'],
+  'womens-tops': ['women top', 'women blouse', 'women shirt', 'women tee', 'women crop top', 'women camisole'],
+  'womens-coords': ['women matching set', 'women two piece set', 'women outfit set', 'women co ord', 'women tracksuit', 'women skirt set'],
+  'womens-ethnicwear': ['women kurta', 'women saree', 'women salwar', 'women lehenga', 'women anarkali', 'women ethnic set'],
+  'womens-bottoms': ['women trousers', 'women skirt', 'women pants', 'women shorts', 'women palazzo', 'women wide leg pants'],
+  'womens-denim': ['women jeans', 'women denim', 'women jean jacket', 'women denim shorts', 'women denim skirt', 'women straight jeans'],
+  'womens-outerwear': ['women blazer', 'women jacket', 'women coat', 'women trench', 'women shacket', 'women bomber jacket'],
+  'womens-activewear': ['women activewear', 'women leggings', 'women sports bra', 'women training', 'women gym wear', 'women yoga set'],
+  'womens-winterwear': ['women sweater', 'women cardigan', 'women hoodie', 'women winter jacket', 'women knitwear', 'women pullover'],
+  'womens-swimwear': ['women swimsuit', 'women bikini', 'women swimwear', 'women beachwear', 'women one piece swimsuit', 'women resort wear'],
+  'womens-lingerie': ['women lingerie', 'women bralette', 'women bra', 'women underwear', 'women seamless bra', 'women intimate wear'],
+  'womens-sleepwear': ['women pajamas', 'women sleepwear', 'women loungewear', 'women nightwear', 'women pyjama set', 'women lounge set'],
+  'womens-shoes': ['women sneakers', 'women heels', 'women sandals', 'women boots', 'women flats', 'women loafers'],
+  'womens-bags': ['women handbag', 'women tote bag', 'women shoulder bag', 'women crossbody', 'women clutch', 'women mini bag'],
+  'womens-jewellery': ['women earrings', 'women necklace', 'women bracelet', 'women ring', 'women pendant', 'women jewellery set'],
+  'womens-watches': ['women watch', 'ladies watch', 'women smartwatch', 'women bracelet watch', 'women analog watch', 'women fashion watch'],
+  'womens-sunglasses': ['women sunglasses', 'women eyewear', 'women shades', 'ladies sunglasses', 'women cat eye sunglasses', 'women aviator sunglasses'],
+  'womens-accessories': ['women scarf', 'women belt', 'women cap', 'women accessories', 'women hair accessories', 'women wallet'],
 }
 
 const BEAUTY_TERMS: Record<string, string[]> = {
-  'womens-beauty': ['cosmetics', 'makeup', 'lipstick', 'mascara'],
-  'womens-skincare': ['skin-care', 'face-care', 'sunscreen', 'moisturizers'],
-  'womens-haircare': ['hair-care', 'shampoo', 'conditioner', 'hair-treatments'],
-  'womens-fragrance': ['perfumes', 'fragrances', 'eau-de-parfum', 'body-mists'],
+  'womens-beauty': ['cosmetics', 'makeup', 'lipstick', 'mascara', 'foundation', 'blush'],
+  'womens-skincare': ['skin-care', 'face-care', 'sunscreen', 'moisturizers', 'serums', 'cleansers'],
+  'womens-haircare': ['hair-care', 'shampoo', 'conditioner', 'hair-treatments', 'hair-oils', 'hair-masks'],
+  'womens-fragrance': ['perfumes', 'fragrances', 'eau-de-parfum', 'body-mists', 'eau-de-toilette', 'women-perfume'],
 }
 
 const memoryCache = new Map<string, { expires: number; products: Product[] }>()
@@ -163,11 +166,17 @@ async function loadFashionCategory(category: string) {
   const terms = FASHION_TERMS[category] ?? []
   if (!terms.length) return []
 
+  // Stage requests so popular categories can reach a large catalog without forcing
+  // every visitor to pay the maximum upstream latency/call count.
   const firstPass = await loadSoleScoutBatch(terms, [1, 2], category)
-  if (firstPass.length >= 88) return firstPass
+  if (firstPass.length >= EARLY_EXIT_TARGET) return firstPass
 
-  const finalPass = await loadSoleScoutBatch(terms, [3], category)
-  return [...firstPass, ...finalPass]
+  const secondPass = await loadSoleScoutBatch(terms, [3, 4], category)
+  const combined = [...firstPass, ...secondPass]
+  if (combined.length >= EARLY_EXIT_TARGET) return combined
+
+  const finalPass = await loadSoleScoutBatch(terms, [5], category)
+  return [...combined, ...finalPass]
 }
 
 function normalizeBeauty(item: BeautyProduct, category: string): Product | null {
@@ -201,7 +210,7 @@ function normalizeBeauty(item: BeautyProduct, category: string): Product | null 
 async function loadBeautyBatch(terms: string[], pages: number[], category: string) {
   const fields = 'code,product_name,brands,categories,quantity,image_url,image_front_url,image_ingredients_url,image_packaging_url'
   const requests = terms.flatMap((term) => pages.map(async (page) => {
-    const url = `/catalog-source/openbeauty?categories_tags_en=${encodeURIComponent(term)}&page=${page}&page_size=60&fields=${fields}`
+    const url = `/catalog-source/openbeauty?categories_tags_en=${encodeURIComponent(term)}&page=${page}&page_size=80&fields=${fields}`
     const payload = await fetchProviderJson<BeautyPayload>(url)
     return (payload.products ?? []).map((item) => normalizeBeauty(item, category)).filter((item): item is Product => Boolean(item))
   }))
@@ -214,10 +223,14 @@ async function loadBeautyCategory(category: string) {
   if (!terms.length) return []
 
   const firstPass = await loadBeautyBatch(terms, [1], category)
-  if (firstPass.length >= 88) return firstPass
+  if (firstPass.length >= EARLY_EXIT_TARGET) return firstPass
 
-  const finalPass = await loadBeautyBatch(terms, [2], category)
-  return [...firstPass, ...finalPass]
+  const secondPass = await loadBeautyBatch(terms, [2], category)
+  const combined = [...firstPass, ...secondPass]
+  if (combined.length >= EARLY_EXIT_TARGET) return combined
+
+  const finalPass = await loadBeautyBatch(terms, [3], category)
+  return [...combined, ...finalPass]
 }
 
 function dedupe(products: Product[]) {
