@@ -5,7 +5,7 @@ import { clearCatalogCache, fetchCatalog, fetchCategoryCatalog, getCatalogDiagno
 import type { ProviderHealth } from '../lib/catalog/manager'
 import type { Product } from '../types'
 
-const DEPARTMENT_TARGET = 100
+const DEPARTMENT_TARGET = 240
 
 export default function CatalogControlPage() {
   const [products, setProducts] = useState<Product[]>([])
@@ -80,7 +80,7 @@ export default function CatalogControlPage() {
     </section>
 
     <section className="control-panel department-audit">
-      <div className="control-panel-head"><div><span className="eyebrow">DEEP CATALOG QA</span><h2>100-style department target</h2></div><label className="audit-select">Audit <select value={auditCategory} onChange={(event) => setAuditCategory(event.target.value)}>{WOMEN_CATEGORIES.map((category) => <option key={category.value} value={category.value}>{category.label}</option>)}</select></label></div>
+      <div className="control-panel-head"><div><span className="eyebrow">DEEP CATALOG QA</span><h2>{DEPARTMENT_TARGET}-style department target</h2></div><label className="audit-select">Audit <select value={auditCategory} onChange={(event) => setAuditCategory(event.target.value)}>{WOMEN_CATEGORIES.map((category) => <option key={category.value} value={category.value}>{category.label}</option>)}</select></label></div>
       <div className="audit-meter-row"><div className={`audit-score ${auditLoading ? 'loading' : auditPass ? 'pass' : 'warn'}`}><span>{categoryLabel(auditCategory)}</span><strong>{auditLoading ? '…' : auditProducts.length}</strong><small>/ {DEPARTMENT_TARGET} target</small></div><div className="audit-bar"><i style={{width:`${Math.min(100,(auditProducts.length/DEPARTMENT_TARGET)*100)}%`}}/><span>{auditPass ? 'Target reached' : `${Math.max(0,DEPARTMENT_TARGET-auditProducts.length)} more usable styles needed`}</span></div><div className="audit-mini"><span>Real galleries</span><strong>{auditLoading ? '—' : auditStats.galleries}</strong></div></div>
       {!auditLoading && <div className="audit-source-chips">{[...auditStats.sources.entries()].sort((a,b)=>b[1]-a[1]).map(([source,count]) => <span key={source}><b>{count}</b> {source}</span>)}</div>}
       {!auditLoading && auditProducts.length > 0 && <div className="audit-sample-strip">{auditProducts.slice(0,8).map((product) => <img key={product.id} src={product.thumbnail} alt={product.title} title={`${product.brand || 'Veloura'} — ${product.title}`}/>)}</div>}
