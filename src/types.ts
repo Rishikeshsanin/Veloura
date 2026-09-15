@@ -7,6 +7,7 @@ export type ProductSource =
   | 'solescout'
   | 'openbeauty'
   | 'mockshop'
+  | 'vaanzari'
   | 'freeestore'
   | 'curated'
 
