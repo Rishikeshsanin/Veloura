@@ -1,4 +1,5 @@
 import type { Product } from '../../types'
+import { fetchMockShopCategory } from './providers/mockShopNetwork'
 import {
   deterministicDiscount,
   deterministicStock,
@@ -32,7 +33,7 @@ type BeautyProduct = {
 
 type BeautyPayload = { products?: BeautyProduct[] }
 
-const TARGET_PER_CATEGORY = 90
+const TARGET_PER_CATEGORY = 100
 const CATEGORY_CACHE_TTL = 30 * 60 * 1000
 
 const FASHION_TERMS: Record<string, string[]> = {
@@ -150,8 +151,6 @@ async function loadFashionCategory(category: string) {
   const terms = FASHION_TERMS[category] ?? []
   if (!terms.length) return []
 
-  // SoleScout caps a request at 25. Three pages × four focused queries gives
-  // enough candidates to retain 50–100 unique high-quality items after dedupe.
   const requests = terms.flatMap((term) => [1, 2, 3].map(async (page) => {
     const payload = await fetchProviderJson<SoleScoutPayload>(
       `/catalog-source/solescout?q=${encodeURIComponent(term)}&page=${page}&limit=25`,
@@ -224,11 +223,12 @@ export async function fetchCategoryExpansion(category: string): Promise<Product[
   const cached = memoryCache.get(category)
   if (cached && cached.expires > Date.now()) return cached.products
 
-  const [fashion, beauty] = await Promise.all([
+  const [fashion, beauty, shopify] = await Promise.all([
     loadFashionCategory(category),
     loadBeautyCategory(category),
+    fetchMockShopCategory(category).catch(() => []),
   ])
-  const products = dedupe([...fashion, ...beauty])
+  const products = dedupe([...shopify, ...fashion, ...beauty])
   memoryCache.set(category, { expires: Date.now() + CATEGORY_CACHE_TTL, products })
   return products
 }
