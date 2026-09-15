@@ -1,14 +1,19 @@
+import { lazy, Suspense } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import Layout from './components/Layout'
-import AccountPage from './pages/AccountPage'
-import CartPage from './pages/CartPage'
-import CatalogControlPage from './pages/CatalogControlPage'
-import CheckoutPage from './pages/CheckoutPage'
-import HomePage from './pages/HomePage'
-import ProductPage from './pages/ProductPage'
-import ShopPage from './pages/ShopPage'
-import WishlistPage from './pages/WishlistPage'
+import PageLoader from './components/PageLoader'
+
+const HomePage = lazy(() => import('./pages/HomePage'))
+const ShopPage = lazy(() => import('./pages/ShopPage'))
+const ProductPage = lazy(() => import('./pages/ProductPage'))
+const WishlistPage = lazy(() => import('./pages/WishlistPage'))
+const CartPage = lazy(() => import('./pages/CartPage'))
+const CheckoutPage = lazy(() => import('./pages/CheckoutPage'))
+const AccountPage = lazy(() => import('./pages/AccountPage'))
+const CatalogControlPage = lazy(() => import('./pages/CatalogControlPage'))
+
+const page = (element: React.ReactNode) => <Suspense fallback={<PageLoader />}>{element}</Suspense>
 
 export default function App() {
-  return <Routes><Route element={<Layout />}><Route index element={<HomePage />} /><Route path="shop" element={<ShopPage />} /><Route path="product/:id" element={<ProductPage />} /><Route path="wishlist" element={<WishlistPage />} /><Route path="cart" element={<CartPage />} /><Route path="checkout" element={<CheckoutPage />} /><Route path="account" element={<AccountPage />} /><Route path="catalog-control" element={<CatalogControlPage />} /><Route path="*" element={<HomePage />} /></Route></Routes>
+  return <Routes><Route element={<Layout />}><Route index element={page(<HomePage />)} /><Route path="shop" element={page(<ShopPage />)} /><Route path="product/:id" element={page(<ProductPage />)} /><Route path="wishlist" element={page(<WishlistPage />)} /><Route path="cart" element={page(<CartPage />)} /><Route path="checkout" element={page(<CheckoutPage />)} /><Route path="account" element={page(<AccountPage />)} /><Route path="catalog-control" element={page(<CatalogControlPage />)} /><Route path="*" element={page(<HomePage />)} /></Route></Routes>
 }
