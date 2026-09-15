@@ -27,8 +27,8 @@ type ScenePayload = { data?: ScenePack[] }
 
 async function loadSceneSku() {
   const endpoints: Array<[string, string]> = [
-    ['https://scenesku.com/api/v1/public-packs/womens-fashion', 'womens-tops'],
-    ['https://scenesku.com/api/v1/public-packs/shoes', 'womens-shoes'],
+    ['/catalog-source/scenesku/womens-fashion', 'womens-tops'],
+    ['/catalog-source/scenesku/shoes', 'womens-shoes'],
   ]
 
   const settled = await Promise.allSettled(endpoints.map(async ([url, fallbackCategory]) => {
