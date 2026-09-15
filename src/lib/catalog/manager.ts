@@ -1,26 +1,22 @@
+import { WOMEN_CATEGORIES } from '../../data/catalog'
 import { fallbackProducts } from '../../data/fallback'
 import type { Product } from '../../types'
-import { catalogProviders, isUsableImage, normalizeImageUrl, type ProviderId } from './providers'
+import { externalCatalogProviders } from './externalProviders'
+import { catalogProviders, isUsableImage, normalizeImageUrl } from './providers'
+import type { ManagedProvider } from './providers/shared'
 
-const ALLOWED_CATEGORIES = new Set([
-  'womens-dresses',
-  'womens-bags',
-  'womens-shoes',
-  'womens-jewellery',
-  'womens-tops',
-  'womens-beauty',
-  'womens-coords',
-  'womens-ethnicwear',
-  'womens-activewear',
-  'womens-winterwear',
-])
+const ALLOWED_CATEGORIES = new Set(WOMEN_CATEGORIES.map((category) => category.value))
+const CACHE_KEY = 'veloura:catalog:v8'
+const CACHE_TTL = 15 * 60 * 1000
+const CATEGORY_LIMIT = 120
 
-const CACHE_KEY = 'veloura:catalog:v4'
-const CACHE_TTL = 12 * 60 * 1000
-const CATEGORY_LIMIT = 42
+const allProviders: ManagedProvider[] = [
+  ...externalCatalogProviders,
+  ...catalogProviders,
+].sort((a, b) => b.priority - a.priority)
 
 export type ProviderHealth = {
-  id: ProviderId | 'curated' | 'cache'
+  id: string
   label: string
   status: 'ready' | 'failed' | 'cached'
   count: number
@@ -50,15 +46,24 @@ function productIdentity(product: Product) {
 
 function qualityScore(product: Product) {
   const sourceWeight: Record<string, number> = {
-    curated: 25,
-    dummyjson: 20,
-    fakestore: 15,
-    platzi: 12,
-    makeup: 10,
+    scenesku: 45,
+    dummyjson: 30,
+    solescout: 27,
+    openbeauty: 25,
+    curated: 24,
+    freeestore: 20,
+    fakestore: 17,
+    makeup: 15,
+    platzi: 13,
   }
+
+  const imageCount = Math.min(product.images?.length ?? 0, 6)
+  const galleryBonus = imageCount >= 3 ? 12 : imageCount >= 2 ? 6 : 0
+
   return (sourceWeight[product.source ?? ''] ?? 0)
-    + Math.min(product.images?.length ?? 0, 4) * 4
-    + Math.min(product.description?.length ?? 0, 220) / 35
+    + imageCount * 4
+    + galleryBonus
+    + Math.min(product.description?.length ?? 0, 260) / 40
     + (product.brand ? 3 : 0)
     + (product.rating ?? 0) * 2
 }
@@ -69,6 +74,7 @@ function sanitizeProduct(product: Product): Product | null {
     .map(normalizeImageUrl)
     .filter(isUsableImage)))
   if (!images.length || !product.title?.trim()) return null
+
   return {
     ...product,
     title: product.title.trim(),
@@ -130,11 +136,11 @@ function writeSessionCache(products: Product[]) {
   try {
     sessionStorage.setItem(CACHE_KEY, JSON.stringify({ expires: Date.now() + CACHE_TTL, products }))
   } catch {
-    // Storage can be unavailable in private browsing. The in-memory cache still works.
+    // The in-memory cache still works if storage quota/private browsing blocks this.
   }
 }
 
-async function loadProvider(provider: (typeof catalogProviders)[number]) {
+async function loadProvider(provider: ManagedProvider) {
   const started = performance.now()
   try {
     const products = await provider.load()
@@ -174,7 +180,7 @@ export async function fetchManagedCatalog(forceRefresh = false): Promise<Product
 
   pendingCatalog = (async () => {
     providerHealth = []
-    const providerResults = await Promise.all(catalogProviders.map(loadProvider))
+    const providerResults = await Promise.all(allProviders.map(loadProvider))
     providerHealth.push({ id: 'curated', label: 'Veloura curated reserve', status: 'ready', count: fallbackProducts.length, durationMs: 0 })
 
     const catalog = dedupeAndBalance([...providerResults.flat(), ...fallbackProducts])
