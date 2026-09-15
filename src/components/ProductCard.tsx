@@ -24,22 +24,30 @@ export default function ProductCard({ product, compact = false }: { product: Pro
   const imageCandidates = useMemo(() => normalizeImages(product), [product])
   const [imageIndex, setImageIndex] = useState(0)
   const [secondaryFailed, setSecondaryFailed] = useState(false)
+  const [secondaryReady, setSecondaryReady] = useState(false)
   const badge = badgeFor(product)
 
   useEffect(() => {
     setImageIndex(0)
     setSecondaryFailed(false)
+    setSecondaryReady(false)
   }, [product.id])
 
   const primaryImage = imageCandidates[imageIndex]
   const secondaryImage = imageCandidates[imageIndex + 1]
 
+  const primaryFailed = () => {
+    setImageIndex((current) => current + 1)
+    setSecondaryFailed(false)
+    setSecondaryReady(false)
+  }
+
   return <article className={`product-card ${compact ? 'compact' : ''}`} data-category={product.category}>
     <div className="product-media">
       <Link className="product-image-link" to={`/product/${product.id}`} aria-label={product.title}>
         {primaryImage ? <>
-          <img className="product-image primary-image" src={primaryImage} alt={product.title} loading="lazy" decoding="async" onError={() => setImageIndex((current) => current + 1)} />
-          {secondaryImage && !secondaryFailed && <img className="product-image secondary-image" src={secondaryImage} alt="" loading="lazy" decoding="async" onError={() => setSecondaryFailed(true)} />}
+          <img className={`product-image primary-image ${secondaryReady ? 'has-secondary' : ''}`} src={primaryImage} alt={product.title} loading="lazy" decoding="async" onError={primaryFailed} />
+          {secondaryImage && !secondaryFailed && <img className={`product-image secondary-image ${secondaryReady ? 'ready' : ''}`} src={secondaryImage} alt="" loading="lazy" decoding="async" onLoad={() => setSecondaryReady(true)} onError={() => { setSecondaryFailed(true); setSecondaryReady(false) }} />}
         </> : <div className="product-image-fallback"><ImageOff size={26} /><strong>VELOURA</strong><span>{categoryLabel(product.category)}</span></div>}
       </Link>
       <div className="product-badges">{badge && <span className="product-badge">{badge}</span>}{discount >= 30 && <span className="sale-pill">{discount}% OFF</span>}</div>
