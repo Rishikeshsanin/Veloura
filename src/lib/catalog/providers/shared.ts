@@ -1,6 +1,6 @@
 import type { Product } from '../../../types'
 
-export const API_TIMEOUT = 9000
+export const API_TIMEOUT = 12000
 
 export type ManagedProvider = {
   id: string
@@ -29,32 +29,39 @@ export function uniqueExternalImages(values: Array<string | null | undefined>) {
   return Array.from(new Set(values.map(normalizeImageUrl).filter(isUsableExternalImage)))
 }
 
-async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
+async function request(url: string, init?: RequestInit): Promise<Response> {
   const controller = new AbortController()
   const timer = window.setTimeout(() => controller.abort(), API_TIMEOUT)
   try {
     const response = await fetch(url, {
       ...init,
       signal: controller.signal,
-      headers: { Accept: 'application/json', ...(init?.headers ?? {}) },
+      headers: { ...(init?.headers ?? {}) },
     })
     if (!response.ok) throw new Error(`${response.status} ${response.statusText}`)
-    return await response.json() as T
+    return response
   } finally {
     window.clearTimeout(timer)
   }
 }
 
-export function fetchProviderJson<T>(url: string): Promise<T> {
-  return requestJson<T>(url)
+export async function fetchProviderJson<T>(url: string): Promise<T> {
+  const response = await request(url, { headers: { Accept: 'application/json' } })
+  return await response.json() as T
 }
 
-export function postProviderJson<T>(url: string, payload: unknown): Promise<T> {
-  return requestJson<T>(url, {
+export async function fetchProviderText(url: string): Promise<string> {
+  const response = await request(url, { headers: { Accept: 'text/plain,*/*' } })
+  return await response.text()
+}
+
+export async function postProviderJson<T>(url: string, payload: unknown): Promise<T> {
+  const response = await request(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   })
+  return await response.json() as T
 }
 
 export function stableHash(value: string) {
@@ -89,14 +96,14 @@ export function inferCategory(text: string, fallback = 'womens-tops') {
   const value = text.toLowerCase()
   if (/dress|gown|maxi|midi|bodycon|slip dress/.test(value)) return 'womens-dresses'
   if (/kurta|kurti|saree|sari|lehenga|ethnic|salwar|anarkali/.test(value)) return 'womens-ethnicwear'
-  if (/co-ord|coord|matching set|two piece|2 piece|skirt set/.test(value)) return 'womens-coords'
+  if (/co-ord|coord|matching set|two piece|2 piece|skirt set|outfit set/.test(value)) return 'womens-coords'
   if (/jean|denim/.test(value)) return 'womens-denim'
   if (/trouser|pant|skirt|short|palazzo|legging/.test(value)) return 'womens-bottoms'
   if (/blazer|jacket|coat|shacket|trench|parka|outerwear/.test(value)) return 'womens-outerwear'
   if (/cardigan|sweater|knit|hoodie|winter/.test(value)) return 'womens-winterwear'
-  if (/sports bra|active|gym|athletic|yoga|training/.test(value)) return 'womens-activewear'
+  if (/sports bra|active|gym|athletic|yoga|training|performance wear/.test(value)) return 'womens-activewear'
   if (/swim|bikini|beachwear|swimsuit|resort/.test(value)) return 'womens-swimwear'
-  if (/lingerie|bralette|brief|intimate/.test(value)) return 'womens-lingerie'
+  if (/lingerie|bralette|brief|intimate|underwear/.test(value)) return 'womens-lingerie'
   if (/sleep|pyjama|pajama|nightwear|lounge/.test(value)) return 'womens-sleepwear'
   if (/heel|sandal|shoe|pump|loafer|boot|sneaker|trainer|flat|mule|ballerina/.test(value)) return 'womens-shoes'
   if (/bag|purse|tote|clutch|handbag|crossbody|satchel/.test(value)) return 'womens-bags'
