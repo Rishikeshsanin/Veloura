@@ -1,3 +1,4 @@
+import { dummyDepartmentsProvider } from './providers/dummyDepartments'
 import { freeEStoreProvider } from './providers/freeEStore'
 import { openBeautyProvider } from './providers/openBeauty'
 import { sceneSkuProvider } from './providers/scenesku'
@@ -6,6 +7,7 @@ import type { ManagedProvider } from './providers/shared'
 
 export const externalCatalogProviders: ManagedProvider[] = [
   sceneSkuProvider,
+  dummyDepartmentsProvider,
   soleScoutProvider,
   openBeautyProvider,
   freeEStoreProvider,
