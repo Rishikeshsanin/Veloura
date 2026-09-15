@@ -13,6 +13,7 @@ export default function ShopPage() {
   const [params, setParams] = useSearchParams()
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
+  const [expanding, setExpanding] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [shown, setShown] = useState(30)
 
@@ -28,14 +29,46 @@ export default function ShopPage() {
   useEffect(() => {
     let cancelled = false
     setLoading(true)
+    setExpanding(false)
 
-    const request = query
-      ? searchProducts(query)
-      : category
-        ? fetchCategoryCatalog(category)
-        : fetchCatalog()
+    if (query) {
+      searchProducts(query).then((items) => {
+        if (cancelled) return
+        setProducts(items)
+        setLoading(false)
+      }).catch(() => {
+        if (cancelled) return
+        setProducts([])
+        setLoading(false)
+      })
+      return () => { cancelled = true }
+    }
 
-    request.then((items) => {
+    if (category) {
+      // Render the already-managed base catalog as soon as it is available,
+      // while the focused 50–100 style expansion continues in the background.
+      fetchCatalog().then((base) => {
+        if (cancelled) return
+        setProducts(base.filter((product) => product.category === category))
+        setLoading(false)
+        setExpanding(true)
+      }).catch(() => undefined)
+
+      fetchCategoryCatalog(category).then((deep) => {
+        if (cancelled) return
+        setProducts(deep)
+        setLoading(false)
+        setExpanding(false)
+      }).catch(() => {
+        if (cancelled) return
+        setLoading(false)
+        setExpanding(false)
+      })
+
+      return () => { cancelled = true }
+    }
+
+    fetchCatalog().then((items) => {
       if (cancelled) return
       setProducts(items)
       setLoading(false)
@@ -102,13 +135,13 @@ export default function ShopPage() {
 
   return <div className="shop-page container-wide">
     <div className="breadcrumbs"><Link to="/">Home</Link><span>/</span><span>Women</span>{category && <><span>/</span><span>{categoryLabel(category)}</span></>}</div>
-    <section className="shop-hero"><div><span className="eyebrow">WOMEN'S STORE</span><h1>{query ? `Search: “${query}”` : category ? categoryLabel(category) : 'Women’s fashion'}</h1><p>{category ? `A deeper ${categoryLabel(category).toLowerCase()} collection pulled from Veloura’s managed marketplace network.` : 'Dresses, tops, co-ords, ethnic wear, footwear, bags, jewellery, beauty and more—curated only for women.'}</p></div><div className="catalog-count"><strong>{loading ? '—' : visible.length}</strong><span>styles</span></div></section>
+    <section className="shop-hero"><div><span className="eyebrow">WOMEN'S STORE</span><h1>{query ? `Search: “${query}”` : category ? categoryLabel(category) : 'Women’s fashion'}</h1><p>{category ? `A deeper ${categoryLabel(category).toLowerCase()} collection pulled from Veloura’s managed marketplace network.` : 'Dresses, tops, co-ords, ethnic wear, footwear, bags, jewellery, beauty and more—curated only for women.'}</p></div><div className="catalog-count"><strong>{loading ? '—' : visible.length}</strong><span>{expanding ? 'and growing' : 'styles'}</span></div></section>
 
     <div className="category-chip-row"><Link className={!category ? 'active' : ''} to="/shop">All women</Link>{WOMEN_CATEGORIES.map((item) => <Link className={category === item.value ? 'active' : ''} key={item.value} to={`/shop?category=${item.value}`}>{item.shortLabel || item.label}</Link>)}</div>
 
     <div className="quick-filter-row"><button className={activeFilterCount ? 'has-count' : ''} onClick={() => setFiltersOpen(true)}><SlidersHorizontal size={16}/> Filters{activeFilterCount > 0 && <b>{activeFilterCount}</b>}</button><button className={rating >= 4.5 ? 'active' : ''} onClick={() => update('rating', rating >= 4.5 ? '' : '4.5')}><Sparkles size={14}/> Top rated</button><button className={discount >= 40 ? 'active' : ''} onClick={() => update('discount', discount >= 40 ? '' : '40')}>40%+ off</button><button className={max === 999 ? 'active' : ''} onClick={() => update('max', max === 999 ? '' : '999')}>Under ₹999</button><button className={max === 1499 ? 'active' : ''} onClick={() => update('max', max === 1499 ? '' : '1499')}>Under ₹1,499</button>{brand && <button className="active filter-token" onClick={() => update('brand','')}>{brand}<X size={12}/></button>}{size && <button className="active filter-token" onClick={() => update('size','')}>Size {size}<X size={12}/></button>}</div>
 
-    <div className="shop-toolbar"><span>{loading ? category ? `Building the ${categoryLabel(category)} collection…` : 'Loading women’s store…' : `${visible.length} styles found`}</span><label>Sort by <select value={sort} onChange={(e) => update('sort', e.target.value)}><option value="featured">Recommended</option><option value="new">What’s new</option><option value="rating">Customer rating</option><option value="discount">Better discount</option><option value="price-low">Price: low to high</option><option value="price-high">Price: high to low</option></select><ChevronDown size={15}/></label></div>
+    <div className="shop-toolbar"><span>{loading ? 'Loading women’s store…' : expanding ? `${visible.length} styles · adding more…` : `${visible.length} styles found`}</span><label>Sort by <select value={sort} onChange={(e) => update('sort', e.target.value)}><option value="featured">Recommended</option><option value="new">What’s new</option><option value="rating">Customer rating</option><option value="discount">Better discount</option><option value="price-low">Price: low to high</option><option value="price-high">Price: high to low</option></select><ChevronDown size={15}/></label></div>
 
     <div className="shop-layout">
       <aside className={`filters ${filtersOpen ? 'open' : ''}`}><div className="filter-head"><strong>FILTERS</strong><button className="text-link" onClick={clearFilters}>CLEAR FILTERS</button><button className="icon-button mobile-only" onClick={() => setFiltersOpen(false)}><X/></button></div>
