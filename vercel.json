@@ -4,7 +4,8 @@
     { "source": "/catalog-source/solescout", "destination": "https://solescout.ai/api/public/search" },
     { "source": "/catalog-source/openbeauty", "destination": "https://world.openbeautyfacts.org/api/v2/search" },
     { "source": "/catalog-source/mock-directory", "destination": "https://mock.shop/llms.txt" },
-    { "source": "/catalog-source/mockshop", "destination": "https://apparel.mock.shop/api" },
+    { "source": "/catalog-source/mockshop", "destination": "/api/mockshop?store=apparel" },
+    { "source": "/catalog-source/mockshop/:store", "destination": "/api/mockshop?store=:store" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
