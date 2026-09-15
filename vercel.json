@@ -3,6 +3,7 @@
     { "source": "/catalog-source/scenesku/:pack", "destination": "https://scenesku.com/api/v1/public-packs/:pack" },
     { "source": "/catalog-source/solescout", "destination": "https://solescout.ai/api/public/search" },
     { "source": "/catalog-source/openbeauty", "destination": "https://world.openbeautyfacts.org/api/v2/search" },
+    { "source": "/catalog-source/vaanzari", "destination": "https://vaanzari.com/api/sarees" },
     { "source": "/catalog-source/mock-directory", "destination": "https://mock.shop/llms.txt" },
     { "source": "/catalog-source/mockshop", "destination": "/api/mockshop?store=apparel" },
     { "source": "/catalog-source/mockshop/:store", "destination": "/api/mockshop?store=:store" },
