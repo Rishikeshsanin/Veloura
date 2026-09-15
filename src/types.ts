@@ -6,6 +6,7 @@ export type ProductSource =
   | 'scenesku'
   | 'solescout'
   | 'openbeauty'
+  | 'mockshop'
   | 'freeestore'
   | 'curated'
 
