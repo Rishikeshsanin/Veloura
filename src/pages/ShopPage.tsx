@@ -2,6 +2,7 @@ import { ChevronDown, SlidersHorizontal, Sparkles, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import ProductCard from '../components/ProductCard'
+import ProductSkeleton from '../components/ProductSkeleton'
 import { WOMEN_CATEGORIES, categoryLabel } from '../data/catalog'
 import { fetchCatalog, fetchCategoryCatalog, searchProducts } from '../lib/api'
 import { getProductPricing } from '../lib/money'
@@ -45,8 +46,6 @@ export default function ShopPage() {
     }
 
     if (category) {
-      // Render the already-managed base catalog as soon as it is available,
-      // while the focused 50–100 style expansion continues in the background.
       fetchCatalog().then((base) => {
         if (cancelled) return
         setProducts(base.filter((product) => product.category === category))
@@ -141,7 +140,7 @@ export default function ShopPage() {
 
     <div className="quick-filter-row"><button className={activeFilterCount ? 'has-count' : ''} onClick={() => setFiltersOpen(true)}><SlidersHorizontal size={16}/> Filters{activeFilterCount > 0 && <b>{activeFilterCount}</b>}</button><button className={rating >= 4.5 ? 'active' : ''} onClick={() => update('rating', rating >= 4.5 ? '' : '4.5')}><Sparkles size={14}/> Top rated</button><button className={discount >= 40 ? 'active' : ''} onClick={() => update('discount', discount >= 40 ? '' : '40')}>40%+ off</button><button className={max === 999 ? 'active' : ''} onClick={() => update('max', max === 999 ? '' : '999')}>Under ₹999</button><button className={max === 1499 ? 'active' : ''} onClick={() => update('max', max === 1499 ? '' : '1499')}>Under ₹1,499</button>{brand && <button className="active filter-token" onClick={() => update('brand','')}>{brand}<X size={12}/></button>}{size && <button className="active filter-token" onClick={() => update('size','')}>Size {size}<X size={12}/></button>}</div>
 
-    <div className="shop-toolbar"><span>{loading ? 'Loading women’s store…' : expanding ? `${visible.length} styles · adding more…` : `${visible.length} styles found`}</span><label>Sort by <select value={sort} onChange={(e) => update('sort', e.target.value)}><option value="featured">Recommended</option><option value="new">What’s new</option><option value="rating">Customer rating</option><option value="discount">Better discount</option><option value="price-low">Price: low to high</option><option value="price-high">Price: high to low</option></select><ChevronDown size={15}/></label></div>
+    <div className="shop-toolbar"><span aria-live="polite">{loading ? 'Loading women’s store…' : expanding ? `${visible.length} styles · adding more…` : `${visible.length} styles found`}</span><label>Sort by <select value={sort} onChange={(e) => update('sort', e.target.value)}><option value="featured">Recommended</option><option value="new">What’s new</option><option value="rating">Customer rating</option><option value="discount">Better discount</option><option value="price-low">Price: low to high</option><option value="price-high">Price: high to low</option></select><ChevronDown size={15}/></label>{expanding && <i className="catalog-progress" aria-hidden="true" />}</div>
 
     <div className="shop-layout">
       <aside className={`filters ${filtersOpen ? 'open' : ''}`}><div className="filter-head"><strong>FILTERS</strong><button className="text-link" onClick={clearFilters}>CLEAR FILTERS</button><button className="icon-button mobile-only" onClick={() => setFiltersOpen(false)}><X/></button></div>
@@ -154,7 +153,7 @@ export default function ShopPage() {
         <button className="button primary mobile-only full" onClick={() => setFiltersOpen(false)}>Show {visible.length} styles</button>
       </aside>
       {filtersOpen && <div className="filter-backdrop mobile-only" onClick={() => setFiltersOpen(false)}/>} 
-      <section className="catalog-column"><div className="product-grid shop-grid">{loading ? Array.from({length: 15}).map((_,i) => <div key={i} className="skeleton product-skeleton"/>) : visible.slice(0,shown).map((p) => <ProductCard key={p.id} product={p}/>)}</div>{!loading && visible.length === 0 && <div className="empty-state"><h2>No styles matched</h2><p>Clear a filter and keep exploring.</p><button className="button outline" onClick={clearFilters}>Clear filters</button></div>}{shown < visible.length && <div className="load-more"><span>Showing {Math.min(shown,visible.length)} of {visible.length}</span><button className="button outline" onClick={() => setShown((n) => n + 30)}>Load 30 more</button></div>}</section>
+      <section className="catalog-column"><div className="product-grid shop-grid">{loading ? Array.from({length: 15}).map((_,i) => <ProductSkeleton key={i} />) : visible.slice(0,shown).map((p) => <ProductCard key={p.id} product={p}/>)}</div>{!loading && visible.length === 0 && <div className="empty-state"><h2>No styles matched</h2><p>Clear a filter and keep exploring.</p><button className="button outline" onClick={clearFilters}>Clear filters</button></div>}{shown < visible.length && <div className="load-more"><span>Showing {Math.min(shown,visible.length)} of {visible.length}</span><button className="button outline" onClick={() => setShown((n) => n + 30)}>Load 30 more</button></div>}</section>
     </div>
   </div>
 }
