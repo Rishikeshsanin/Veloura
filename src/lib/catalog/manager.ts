@@ -1,14 +1,16 @@
 import { WOMEN_CATEGORIES } from '../../data/catalog'
 import { fallbackProducts } from '../../data/fallback'
 import type { Product } from '../../types'
+import { fetchCategoryExpansion, clearCategoryExpansionCache } from './categoryExpansion'
 import { externalCatalogProviders } from './externalProviders'
 import { catalogProviders, isUsableImage, normalizeImageUrl } from './providers'
 import type { ManagedProvider } from './providers/shared'
 
 const ALLOWED_CATEGORIES = new Set(WOMEN_CATEGORIES.map((category) => category.value))
-const CACHE_KEY = 'veloura:catalog:v8'
+const CACHE_KEY = 'veloura:catalog:v10'
 const CACHE_TTL = 15 * 60 * 1000
-const CATEGORY_LIMIT = 120
+const CATEGORY_LIMIT = 160
+const CATEGORY_CACHE_TTL = 30 * 60 * 1000
 
 const allProviders: ManagedProvider[] = [
   ...externalCatalogProviders,
@@ -27,15 +29,29 @@ export type ProviderHealth = {
 let catalogCache: Product[] | null = null
 let pendingCatalog: Promise<Product[]> | null = null
 let providerHealth: ProviderHealth[] = []
+const categoryCache = new Map<string, { expires: number; products: Product[] }>()
 
 function imageIdentity(url: string) {
   try {
     const parsed = new URL(normalizeImageUrl(url))
-    parsed.search = ''
     parsed.hash = ''
-    return `${parsed.hostname}${parsed.pathname}`.toLowerCase()
+
+    // Remove only visual-transform parameters. Product identity parameters such as
+    // SoleScout's ?slug=...&sku=... MUST stay or thousands of distinct images
+    // collapse into one /api/goat-image identity.
+    const transformParams = new Set([
+      'w', 'width', 'h', 'height', 'q', 'quality', 'auto', 'fit', 'crop',
+      'fm', 'format', 'dpr', 'ixlib', 'rect', 'cs', 'bg', 'sat', 'con',
+    ])
+    for (const key of Array.from(parsed.searchParams.keys())) {
+      if (transformParams.has(key.toLowerCase())) parsed.searchParams.delete(key)
+    }
+
+    const sorted = Array.from(parsed.searchParams.entries()).sort(([a], [b]) => a.localeCompare(b))
+    const query = sorted.length ? `?${new URLSearchParams(sorted).toString()}` : ''
+    return `${parsed.hostname}${parsed.pathname}${query}`.toLowerCase()
   } catch {
-    return normalizeImageUrl(url).split('?')[0].toLowerCase()
+    return normalizeImageUrl(url).toLowerCase()
   }
 }
 
@@ -46,19 +62,19 @@ function productIdentity(product: Product) {
 
 function qualityScore(product: Product) {
   const sourceWeight: Record<string, number> = {
-    scenesku: 45,
-    dummyjson: 30,
-    solescout: 27,
-    openbeauty: 25,
+    scenesku: 52,
+    mockshop: 46,
+    solescout: 36,
+    dummyjson: 31,
+    openbeauty: 29,
     curated: 24,
-    freeestore: 20,
     fakestore: 17,
-    makeup: 15,
+    makeup: 16,
     platzi: 13,
   }
 
-  const imageCount = Math.min(product.images?.length ?? 0, 6)
-  const galleryBonus = imageCount >= 3 ? 12 : imageCount >= 2 ? 6 : 0
+  const imageCount = Math.min(product.images?.length ?? 0, 8)
+  const galleryBonus = imageCount >= 5 ? 18 : imageCount >= 3 ? 12 : imageCount >= 2 ? 6 : 0
 
   return (sourceWeight[product.source ?? ''] ?? 0)
     + imageCount * 4
@@ -144,12 +160,25 @@ async function loadProvider(provider: ManagedProvider) {
   const started = performance.now()
   try {
     const products = await provider.load()
+    const durationMs = Math.round(performance.now() - started)
+    if (!products.length) {
+      providerHealth.push({
+        id: provider.id,
+        label: provider.label,
+        status: 'failed',
+        count: 0,
+        durationMs,
+        message: 'Connected, but returned no usable women’s products',
+      })
+      return []
+    }
+
     providerHealth.push({
       id: provider.id,
       label: provider.label,
       status: 'ready',
       count: products.length,
-      durationMs: Math.round(performance.now() - started),
+      durationMs,
     })
     return products
   } catch (error) {
@@ -204,9 +233,35 @@ export async function fetchManagedCatalog(forceRefresh = false): Promise<Product
   }
 }
 
+export async function fetchManagedCategory(category: string) {
+  const base = await fetchManagedCatalog()
+  if (!ALLOWED_CATEGORIES.has(category)) return base
+
+  const cached = categoryCache.get(category)
+  if (cached && cached.expires > Date.now()) return cached.products
+
+  const expansion = await fetchCategoryExpansion(category)
+  const merged = dedupeAndBalance([
+    ...base.filter((product) => product.category === category),
+    ...expansion,
+    ...fallbackProducts.filter((product) => product.category === category),
+  ]).filter((product) => product.category === category)
+
+  categoryCache.set(category, { expires: Date.now() + CATEGORY_CACHE_TTL, products: merged })
+  return merged
+}
+
 export async function fetchManagedProduct(id: string | number) {
   const catalog = await fetchManagedCatalog()
-  return catalog.find((product) => product.id === Number(id)) ?? null
+  const match = catalog.find((product) => product.id === Number(id))
+  if (match) return match
+
+  for (const category of WOMEN_CATEGORIES) {
+    const cached = categoryCache.get(category.value)?.products
+    const found = cached?.find((product) => product.id === Number(id))
+    if (found) return found
+  }
+  return null
 }
 
 export async function searchManagedCatalog(query: string) {
@@ -230,5 +285,7 @@ export function getCatalogDiagnostics() {
 
 export function clearCatalogCache() {
   catalogCache = null
+  categoryCache.clear()
+  clearCategoryExpansionCache()
   try { sessionStorage.removeItem(CACHE_KEY) } catch { /* noop */ }
 }
