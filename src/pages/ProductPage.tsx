@@ -90,7 +90,7 @@ export default function ProductPage() {
     <div className="container-wide product-page">
       <div className="breadcrumbs"><Link to="/">Home</Link><span>/</span><Link to={`/shop?category=${product.category}`}>{categoryLabel(product.category)}</Link><span>/</span><span>{product.title}</span></div>
       <div className="product-detail">
-        <section className="product-gallery">
+        <section className={`product-gallery ${galleryViews.length <= 1 ? 'single-gallery' : ''}`}>
           {galleryViews.length > 1 && <div className="thumb-list">{galleryViews.map((view,index) => <button className={index === image ? 'active' : ''} key={view.src} onClick={() => setImage(index)} aria-label={view.label}><img src={view.src} alt="" onError={() => failImage(view.src)} /></button>)}</div>}
           <div className={`main-product-image ${galleryViews.length === 1 ? 'single-image' : ''}`}>{activeView ? <img src={activeView.src} alt={product.title} onError={() => failImage(activeView.src)} /> : <div className="product-detail-fallback"><ImageOff size={32}/><strong>VELOURA</strong><span>{categoryLabel(product.category)}</span></div>}{pricing.discount > 0 && <span>{pricing.discount}% OFF</span>}</div>
         </section>
