@@ -92,28 +92,56 @@ export function sizesForCategory(category: string) {
   return ['XS', 'S', 'M', 'L', 'XL']
 }
 
-export function inferCategory(text: string, fallback = 'womens-tops') {
+type CategoryRule = { include: RegExp; exclude?: RegExp }
+
+const CATEGORY_RULES: Record<string, CategoryRule> = {
+  'womens-dresses': { include: /\b(dress|gown|bodycon|slip dress|maxi dress|midi dress|mini dress)\b/i, exclude: /\b(dress shoes?|shoe|sandal|boot)\b/i },
+  'womens-tops': { include: /\b(top|blouse|shirt|tee|t-shirt|tshirt|camisole|tank top|bodysuit)\b/i, exclude: /\b(top handle bag|handbag|tote|shoe|sandal)\b/i },
+  'womens-coords': { include: /\b(co-?ord|coord|matching set|two[- ]piece|2[- ]piece|outfit set|skirt set|tracksuit|matching separates)\b/i },
+  'womens-ethnicwear': { include: /\b(kurta|kurti|saree|sari|lehenga|salwar|anarkali|dupatta|ethnic|banarasi)\b/i },
+  'womens-bottoms': { include: /\b(trouser|pants?|skirt|shorts?|palazzo|leggings?|culottes?|joggers?)\b/i },
+  'womens-denim': { include: /\b(denim|jeans?|jean jacket|denim skirt|denim shorts?)\b/i },
+  'womens-outerwear': { include: /\b(blazer|jacket|coat|trench|shacket|parka|bomber|outerwear)\b/i },
+  'womens-activewear': { include: /\b(activewear|sports bra|gym|yoga|training|athletic|performance wear|workout|running tights?)\b/i },
+  'womens-winterwear': { include: /\b(sweater|cardigan|hoodie|knitwear|pullover|fleece|winter coat|winter jacket)\b/i },
+  'womens-swimwear': { include: /\b(swimwear|swimsuit|bikini|beachwear|one[- ]piece swimsuit|resort wear|tankini)\b/i },
+  'womens-lingerie': { include: /\b(lingerie|bralette|bra|underwear|panty|panties|intimate|briefs?)\b/i },
+  'womens-sleepwear': { include: /\b(sleepwear|nightwear|pajamas?|pyjamas?|loungewear|nightdress|robe|lounge set)\b/i },
+  'womens-shoes': { include: /\b(shoes?|sneakers?|heels?|sandals?|boots?|loafers?|pumps?|mules?|flats?|ballerina|trainers?)\b/i },
+  'womens-bags': { include: /\b(bag|handbag|purse|tote|clutch|crossbody|satchel|backpack|shoulder bag|mini bag)\b/i },
+  'womens-jewellery': { include: /\b(earrings?|necklace|bracelet|ring|jewel(?:lery|ry)?|pendant|chain|anklet|brooch)\b/i },
+  'womens-watches': {
+    include: /\b(watch(?:es)?|wristwatch|smartwatch|timepiece|chronograph|g[- ]?shock|baby[- ]?g)\b/i,
+    exclude: /\b(stopwatch|watch cap|cap|beanie|hat|gloves?|shirt|tee|t-shirt|short sleeve|sandal|shoe|sneaker|shorts?|pants?|trouser|jacket|hoodie|dress|top|bag|watch band|watch strap|watch case)\b/i,
+  },
+  'womens-sunglasses': { include: /\b(sunglasses?|eyewear|shades|cat[- ]eye glasses|aviator glasses|optical frames?)\b/i },
+  'womens-accessories': { include: /\b(scarf|belt|cap|beanie|hat|hair clip|headband|wallet|gloves?|accessor(?:y|ies))\b/i },
+  'womens-beauty': { include: /\b(lipstick|mascara|foundation|blush|makeup|cosmetic|nail polish|brow|concealer|eyeliner|lip gloss)\b/i },
+  'womens-skincare': { include: /\b(skincare|skin care|cleanser|moisturizer|moisturiser|serum|sunscreen|toner|face cream|face wash|lotion)\b/i },
+  'womens-haircare': { include: /\b(shampoo|conditioner|hair oil|hair mask|haircare|hair care|hair treatment|scalp|styling cream)\b/i },
+  'womens-fragrance': { include: /\b(perfume|fragrance|eau de|body mist|parfum|eau de parfum|eau de toilette)\b/i },
+}
+
+export function matchesCategoryText(category: string, text: string) {
+  const rule = CATEGORY_RULES[category]
+  if (!rule) return true
   const value = text.toLowerCase()
-  if (/dress|gown|maxi|midi|bodycon|slip dress/.test(value)) return 'womens-dresses'
-  if (/kurta|kurti|saree|sari|lehenga|ethnic|salwar|anarkali/.test(value)) return 'womens-ethnicwear'
-  if (/co-ord|coord|matching set|two piece|2 piece|skirt set|outfit set/.test(value)) return 'womens-coords'
-  if (/jean|denim/.test(value)) return 'womens-denim'
-  if (/trouser|pant|skirt|short|palazzo|legging/.test(value)) return 'womens-bottoms'
-  if (/blazer|jacket|coat|shacket|trench|parka|outerwear/.test(value)) return 'womens-outerwear'
-  if (/cardigan|sweater|knit|hoodie|winter/.test(value)) return 'womens-winterwear'
-  if (/sports bra|active|gym|athletic|yoga|training|performance wear/.test(value)) return 'womens-activewear'
-  if (/swim|bikini|beachwear|swimsuit|resort/.test(value)) return 'womens-swimwear'
-  if (/lingerie|bralette|brief|intimate|underwear/.test(value)) return 'womens-lingerie'
-  if (/sleep|pyjama|pajama|nightwear|lounge/.test(value)) return 'womens-sleepwear'
-  if (/heel|sandal|shoe|pump|loafer|boot|sneaker|trainer|flat|mule|ballerina/.test(value)) return 'womens-shoes'
-  if (/bag|purse|tote|clutch|handbag|crossbody|satchel/.test(value)) return 'womens-bags'
-  if (/earring|necklace|bracelet|ring|jewel|pendant|chain|anklet/.test(value)) return 'womens-jewellery'
-  if (/watch|timepiece/.test(value)) return 'womens-watches'
-  if (/sunglass|eyewear|shades/.test(value)) return 'womens-sunglasses'
-  if (/perfume|fragrance|eau de|body mist|parfum/.test(value)) return 'womens-fragrance'
-  if (/shampoo|conditioner|hair oil|hair mask|haircare|hair care|styling/.test(value)) return 'womens-haircare'
-  if (/skin care|skincare|cleanser|moisturi|serum|sunscreen|toner|face cream/.test(value)) return 'womens-skincare'
-  if (/lip|mascara|foundation|blush|makeup|beauty|nail|brow|concealer|eyeliner|cosmetic/.test(value)) return 'womens-beauty'
-  if (/belt|scarf|cap|hat|hair clip|accessor/.test(value)) return 'womens-accessories'
+  if (!rule.include.test(value)) return false
+  if (rule.exclude?.test(value)) return false
+  return true
+}
+
+const INFERENCE_ORDER = [
+  'womens-dresses','womens-ethnicwear','womens-coords','womens-denim','womens-outerwear',
+  'womens-winterwear','womens-activewear','womens-swimwear','womens-lingerie','womens-sleepwear',
+  'womens-shoes','womens-bags','womens-jewellery','womens-sunglasses','womens-fragrance',
+  'womens-haircare','womens-skincare','womens-beauty','womens-accessories','womens-watches',
+  'womens-bottoms','womens-tops',
+]
+
+export function inferCategory(text: string, fallback = 'womens-tops') {
+  for (const category of INFERENCE_ORDER) {
+    if (matchesCategoryText(category, text)) return category
+  }
   return fallback
 }
