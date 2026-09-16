@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { ChevronDown, Heart, HelpCircle, Home, Menu, Search, ShoppingBag, Truck, UserRound, X } from 'lucide-react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { HEADER_NAV, WOMEN_CATEGORIES } from '../data/catalog'
 import { useShop } from '../store/ShopContext'
-import QuickViewModal from './QuickViewModal'
-import SearchOverlay from './SearchOverlay'
+
+const QuickViewModal = lazy(() => import('./QuickViewModal'))
+const SearchOverlay = lazy(() => import('./SearchOverlay'))
 
 const megaGroups = [
   { title: 'Clothing', values: ['womens-dresses','womens-tops','womens-coords','womens-ethnicwear','womens-bottoms','womens-denim','womens-outerwear','womens-winterwear'] },
@@ -16,7 +17,7 @@ const megaGroups = [
 export default function Layout() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
-  const { cartCount, wishlist } = useShop()
+  const { cartCount, wishlist, quickViewProduct } = useShop()
   const location = useLocation()
 
   useEffect(() => {
@@ -33,18 +34,11 @@ export default function Layout() {
 
     {menuOpen && <div className="mobile-menu-backdrop" onClick={() => setMenuOpen(false)}><aside className="mobile-menu" onClick={(e) => e.stopPropagation()}><div className="mobile-menu-head"><span className="brand">VELOURA<span>WOMEN</span></span><button className="icon-button" onClick={() => setMenuOpen(false)}><X /></button></div><button className="menu-search menu-search-launch" onClick={() => { setMenuOpen(false); setSearchOpen(true) }}><Search size={18} /><span>Search women's fashion</span></button><p className="menu-label">Shop women</p><Link onClick={() => setMenuOpen(false)} to="/shop">New in</Link>{megaGroups.map((group) => <div className="mobile-menu-group" key={group.title}><p className="menu-label">{group.title}</p>{group.values.map((value) => { const category = WOMEN_CATEGORIES.find((item) => item.value === value); return category ? <Link key={value} onClick={() => setMenuOpen(false)} to={`/shop?category=${value}`}>{category.label}</Link> : null })}</div>)}<div className="menu-divider" /><Link onClick={() => setMenuOpen(false)} to="/wishlist">Wishlist</Link><Link onClick={() => setMenuOpen(false)} to="/account">My account</Link><Link onClick={() => setMenuOpen(false)} to="/help/faq">Help & FAQ</Link></aside></div>}
 
-    <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} />
-    <QuickViewModal />
+    <Suspense fallback={null}>{searchOpen && <SearchOverlay open onClose={() => setSearchOpen(false)} />}{quickViewProduct && <QuickViewModal />}</Suspense>
 
     <main><div key={`${location.pathname}${location.search}`} className="route-stage"><Outlet /></div></main>
 
-    <nav className="mobile-dock" aria-label="Mobile navigation">
-      <NavLink to="/" end><Home size={20}/><span>Home</span></NavLink>
-      <button type="button" onClick={() => setSearchOpen(true)}><Search size={20}/><span>Search</span></button>
-      <NavLink to="/wishlist" className="badge-wrap"><Heart size={20}/><span>Wishlist</span>{wishlist.length > 0 && <b>{wishlist.length}</b>}</NavLink>
-      <NavLink to="/cart" className="badge-wrap"><ShoppingBag size={20}/><span>Bag</span>{cartCount > 0 && <b>{cartCount}</b>}</NavLink>
-      <NavLink to="/account"><UserRound size={20}/><span>Profile</span></NavLink>
-    </nav>
+    <nav className="mobile-dock" aria-label="Mobile navigation"><NavLink to="/" end><Home size={20}/><span>Home</span></NavLink><button type="button" onClick={() => setSearchOpen(true)}><Search size={20}/><span>Search</span></button><NavLink to="/wishlist" className="badge-wrap"><Heart size={20}/><span>Wishlist</span>{wishlist.length > 0 && <b>{wishlist.length}</b>}</NavLink><NavLink to="/cart" className="badge-wrap"><ShoppingBag size={20}/><span>Bag</span>{cartCount > 0 && <b>{cartCount}</b>}</NavLink><NavLink to="/account"><UserRound size={20}/><span>Profile</span></NavLink></nav>
 
     <footer className="footer"><div className="footer-grid container-wide"><div className="footer-about"><span className="brand footer-brand">VELOURA<span>WOMEN</span></span><p>A women-only fashion destination for everyday style, occasion dressing, accessories and beauty.</p><Link className="footer-story-link" to="/help/about">Our story →</Link></div><div><h4>Online shopping</h4><Link to="/shop?category=womens-dresses">Dresses</Link><Link to="/shop?category=womens-tops">Tops</Link><Link to="/shop?category=womens-ethnicwear">Ethnic wear</Link><Link to="/shop?category=womens-shoes">Footwear</Link><Link to="/shop?category=womens-beauty">Beauty</Link></div><div><h4>Customer policies</h4><Link to="/help/shipping">Shipping</Link><Link to="/help/returns">Returns & refunds</Link><Link to="/help/size-guide">Size guide</Link><Link to="/help/privacy">Privacy</Link><Link to="/help/terms">Terms</Link></div><div><h4>Useful links</h4><Link to="/account">Track orders</Link><Link to="/wishlist">Wishlist</Link><Link to="/help/contact">Contact us</Link><Link to="/help/faq">FAQ</Link></div><div className="footer-newsletter"><h4>Get the good stuff first</h4><p>New drops, big offers and editor picks—straight to your inbox.</p><form className="newsletter" onSubmit={(e) => e.preventDefault()}><input type="email" placeholder="Email address" required /><button>Join</button></form><small>By joining, you agree to receive Veloura marketing emails.</small></div></div><div className="footer-assurance container-wide"><div><strong>CURATED WOMEN'S STORE</strong><span>Multi-source catalog with quality gates</span></div><div><strong>EASY RETURNS</strong><span>30-day return window on eligible items</span></div><div><strong>SECURE CHECKOUT</strong><span>Demo checkout, no card data stored</span></div></div><div className="footer-bottom container-wide"><span>© 2026 Veloura Women</span><span>Fashion, beauty and accessories — curated for women</span></div></footer>
   </div>
