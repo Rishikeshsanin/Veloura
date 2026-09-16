@@ -105,7 +105,7 @@ function normalize(item: LooseObject): Product | null {
 }
 
 async function loadVaanzari() {
-  const payload = await fetchProviderJson<unknown>('/catalog-source/vaanzari?limit=100')
+  const payload = await fetchProviderJson<unknown>('/catalog-source/vaanzari?limit=50')
   return unwrap(payload).map(normalize).filter((product): product is Product => Boolean(product))
 }
 
