@@ -5,11 +5,16 @@ import { getProductPricing } from '../lib/money'
 type ShopState = {
   cart: CartItem[]
   wishlist: Product[]
+  recentlyViewed: Product[]
+  quickViewProduct: Product | null
   addToCart: (product: Product, size?: string, quantity?: number) => void
   removeFromCart: (productId: number, size?: string) => void
   updateQuantity: (productId: number, size: string, quantity: number) => void
   toggleWishlist: (product: Product) => void
   isWishlisted: (productId: number) => boolean
+  recordRecentlyViewed: (product: Product) => void
+  openQuickView: (product: Product) => void
+  closeQuickView: () => void
   cartCount: number
   subtotal: number
   clearCart: () => void
@@ -29,9 +34,12 @@ function read<T>(key: string, fallback: T): T {
 export function ShopProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>(() => read('veloura_cart', []))
   const [wishlist, setWishlist] = useState<Product[]>(() => read('veloura_wishlist', []))
+  const [recentlyViewed, setRecentlyViewed] = useState<Product[]>(() => read('veloura_recent', []))
+  const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null)
 
   useEffect(() => localStorage.setItem('veloura_cart', JSON.stringify(cart)), [cart])
   useEffect(() => localStorage.setItem('veloura_wishlist', JSON.stringify(wishlist)), [wishlist])
+  useEffect(() => localStorage.setItem('veloura_recent', JSON.stringify(recentlyViewed)), [recentlyViewed])
 
   const addToCart = (product: Product, size = 'M', quantity = 1) => {
     setCart((items) => {
@@ -47,14 +55,18 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     setCart((items) => items.map((item) => item.product.id === productId && item.size === size ? { ...item, quantity } : item))
   }
   const toggleWishlist = (product: Product) => setWishlist((items) => items.some((p) => p.id === product.id) ? items.filter((p) => p.id !== product.id) : [...items, product])
+  const recordRecentlyViewed = (product: Product) => setRecentlyViewed((items) => [product, ...items.filter((item) => item.id !== product.id)].slice(0, 18))
 
   const value = useMemo(() => ({
-    cart, wishlist, addToCart, removeFromCart, updateQuantity, toggleWishlist,
+    cart, wishlist, recentlyViewed, quickViewProduct,
+    addToCart, removeFromCart, updateQuantity, toggleWishlist, recordRecentlyViewed,
+    openQuickView: (product: Product) => setQuickViewProduct(product),
+    closeQuickView: () => setQuickViewProduct(null),
     isWishlisted: (productId: number) => wishlist.some((p) => p.id === productId),
     cartCount: cart.reduce((sum, item) => sum + item.quantity, 0),
     subtotal: cart.reduce((sum, item) => sum + getProductPricing(item.product).selling * item.quantity, 0),
     clearCart: () => setCart([]),
-  }), [cart, wishlist])
+  }), [cart, wishlist, recentlyViewed, quickViewProduct])
 
   return <ShopContext.Provider value={value}>{children}</ShopContext.Provider>
 }
