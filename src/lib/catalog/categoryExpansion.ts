@@ -5,6 +5,7 @@ import {
   deterministicDiscount,
   deterministicStock,
   fetchProviderJson,
+  matchesCategoryText,
   sizesForCategory,
   stableHash,
   stableNumericId,
@@ -12,30 +13,10 @@ import {
 } from './providers/shared'
 
 type LooseObject = Record<string, unknown>
-
-type SoleScoutPayload = {
-  total?: number
-  page?: number
-  count?: number
-  results?: LooseObject[]
-}
-
-type BeautyProduct = {
-  code?: string
-  product_name?: string
-  brands?: string
-  categories?: string
-  quantity?: string
-  image_url?: string
-  image_front_url?: string
-  image_ingredients_url?: string
-  image_packaging_url?: string
-}
-
+type SoleScoutPayload = { total?: number; page?: number; count?: number; results?: LooseObject[] }
+type BeautyProduct = { code?: string; product_name?: string; brands?: string; categories?: string; quantity?: string; image_url?: string; image_front_url?: string; image_ingredients_url?: string; image_packaging_url?: string }
 type BeautyPayload = { products?: BeautyProduct[] }
 
-// V5: large marketplace target. The UI still renders in small pages; this is the
-// maximum clean pool we keep after women-only filtering and deduplication.
 const TARGET_PER_CATEGORY = 240
 const CATEGORY_CACHE_TTL = 45 * 60 * 1000
 const EARLY_EXIT_TARGET = 210
@@ -70,200 +51,107 @@ const BEAUTY_TERMS: Record<string, string[]> = {
 
 const memoryCache = new Map<string, { expires: number; products: Product[] }>()
 
-function isRecord(value: unknown): value is LooseObject {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
-}
+function isRecord(value: unknown): value is LooseObject { return Boolean(value) && typeof value === 'object' && !Array.isArray(value) }
+function pickString(item: LooseObject, keys: string[]) { for (const key of keys) { const value = item[key]; if (typeof value === 'string' && value.trim()) return value.trim() } return '' }
+function pickNumber(item: LooseObject, keys: string[]) { for (const key of keys) { const value = item[key]; const parsed = typeof value === 'number' ? value : typeof value === 'string' ? Number(value.replace(/[^0-9.]/g, '')) : Number.NaN; if (Number.isFinite(parsed) && parsed > 0) return parsed } return undefined }
 
-function pickString(item: LooseObject, keys: string[]) {
-  for (const key of keys) {
-    const value = item[key]
-    if (typeof value === 'string' && value.trim()) return value.trim()
-  }
-  return ''
-}
-
-function pickNumber(item: LooseObject, keys: string[]) {
-  for (const key of keys) {
-    const value = item[key]
-    const parsed = typeof value === 'number'
-      ? value
-      : typeof value === 'string'
-        ? Number(value.replace(/[^0-9.]/g, ''))
-        : Number.NaN
-    if (Number.isFinite(parsed) && parsed > 0) return parsed
-  }
-  return undefined
+function itemEvidence(item: LooseObject, title: string) {
+  return [title, pickString(item, ['category','categories','type','product_type','productType','description','department','style','model']), pickString(item,['brand','brand_name','manufacturer'])].filter(Boolean).join(' ')
 }
 
 function collectImages(item: LooseObject) {
   const values: Array<string | null | undefined> = []
-  for (const key of ['image', 'image_url', 'imageUrl', 'thumbnail', 'thumbnail_url', 'photo', 'cover', 'picture']) {
-    const value = item[key]
-    if (typeof value === 'string') values.push(value)
-  }
-  const images = item.images
-  if (Array.isArray(images)) {
-    images.forEach((entry) => {
-      if (typeof entry === 'string') values.push(entry)
-      if (isRecord(entry)) values.push(pickString(entry, ['url', 'src', 'image_url', 'imageUrl', 'thumbnail_url']))
-    })
-  }
+  for (const key of ['image','image_url','imageUrl','thumbnail','thumbnail_url','photo','cover','picture']) { const value = item[key]; if (typeof value === 'string') values.push(value) }
+  if (Array.isArray(item.images)) item.images.forEach((entry) => { if (typeof entry === 'string') values.push(entry); if (isRecord(entry)) values.push(pickString(entry,['url','src','image_url','imageUrl','thumbnail_url'])) })
   return uniqueExternalImages(values)
 }
 
 function normalizeSoleScout(item: LooseObject, category: string): Product | null {
-  const title = pickString(item, ['title', 'name', 'product_name', 'model'])
+  const title = pickString(item, ['title','name','product_name','model'])
   if (!title || /\bmen'?s\b|\bmens\b|\bmale\b|\bboy\b/i.test(title)) return null
+  if (!matchesCategoryText(category, itemEvidence(item, title))) return null
 
-  const slug = pickString(item, ['slug', 'style_code', 'sku']) || title
+  const slug = pickString(item, ['slug','style_code','sku']) || title
   const images = collectImages(item)
   if (!images.length) return null
-
-  const current = pickNumber(item, ['lowest_price_usd', 'price_usd', 'lowest_price', 'price', 'current_price'])
-  const retail = pickNumber(item, ['retail_price_usd', 'retail_price', 'msrp', 'original_price'])
+  const current = pickNumber(item, ['lowest_price_usd','price_usd','lowest_price','price','current_price'])
+  const retail = pickNumber(item, ['retail_price_usd','retail_price','msrp','original_price'])
   const seed = stableHash(slug)
   const price = retail || current || 40 + (seed % 130)
-  const discount = retail && current && retail > current
-    ? Math.round((1 - current / retail) * 100)
-    : deterministicDiscount(seed, 10, 34)
+  const discount = retail && current && retail > current ? Math.round((1 - current / retail) * 100) : deterministicDiscount(seed, 10, 34)
 
-  return {
-    id: stableNumericId(810000, slug),
-    title,
-    description: `Women’s ${category.replace('womens-', '').replaceAll('-', ' ')} style discovered across the Veloura marketplace network.`,
-    category,
-    price,
-    discountPercentage: Math.max(0, Math.min(75, discount)),
-    rating: 4.1 + (seed % 9) / 10,
-    stock: deterministicStock(seed),
-    brand: pickString(item, ['brand', 'brand_name', 'manufacturer']) || 'Marketplace Edit',
-    sku: pickString(item, ['style_code', 'sku']) || undefined,
-    thumbnail: images[0],
-    images,
-    tags: ['women', 'marketplace', category.replace('womens-', '')],
-    gender: 'women',
-    source: 'solescout',
-    sourceId: slug,
-    sourceUrl: pickString(item, ['url', 'product_url']) || `https://solescout.ai/search?q=${encodeURIComponent(title)}`,
-    sourceLabel: 'SoleScout deep catalog',
-    color: pickString(item, ['color', 'colour']) || undefined,
-    sizes: sizesForCategory(category),
-  }
+  return { id: stableNumericId(810000,slug), title, description:`Women’s ${category.replace('womens-','').replaceAll('-',' ')} style discovered across the Veloura marketplace network.`, category, price, discountPercentage:Math.max(0,Math.min(75,discount)), rating:4.1+(seed%9)/10, stock:deterministicStock(seed), brand:pickString(item,['brand','brand_name','manufacturer']) || 'Marketplace Edit', sku:pickString(item,['style_code','sku']) || undefined, thumbnail:images[0], images, tags:['women','marketplace',category.replace('womens-','')], gender:'women', source:'solescout', sourceId:slug, sourceUrl:pickString(item,['url','product_url']) || `https://solescout.ai/search?q=${encodeURIComponent(title)}`, sourceLabel:'SoleScout deep catalog', color:pickString(item,['color','colour']) || undefined, sizes:sizesForCategory(category) }
 }
 
-async function loadSoleScoutBatch(terms: string[], pages: number[], category: string) {
-  const requests = terms.flatMap((term) => pages.map(async (page) => {
-    const payload = await fetchProviderJson<SoleScoutPayload>(
-      `/catalog-source/solescout?q=${encodeURIComponent(term)}&page=${page}&limit=25`,
-    )
-    return (payload.results ?? []).map((item) => normalizeSoleScout(item, category)).filter((item): item is Product => Boolean(item))
-  }))
-  const settled = await Promise.allSettled(requests)
+async function loadSoleScoutBatch(terms:string[], pages:number[], category:string) {
+  const settled = await Promise.allSettled(terms.flatMap((term) => pages.map(async (page) => {
+    const payload = await fetchProviderJson<SoleScoutPayload>(`/catalog-source/solescout?q=${encodeURIComponent(term)}&page=${page}&limit=25`)
+    return (payload.results ?? []).map((item) => normalizeSoleScout(item,category)).filter((item): item is Product => Boolean(item))
+  })))
   return settled.flatMap((result) => result.status === 'fulfilled' ? result.value : [])
 }
 
-async function loadFashionCategory(category: string) {
+async function loadFashionCategory(category:string) {
   const terms = FASHION_TERMS[category] ?? []
   if (!terms.length) return []
-
-  // Stage requests so popular categories can reach a large catalog without forcing
-  // every visitor to pay the maximum upstream latency/call count.
-  const firstPass = await loadSoleScoutBatch(terms, [1, 2], category)
+  const firstPass = await loadSoleScoutBatch(terms,[1,2],category)
   if (firstPass.length >= EARLY_EXIT_TARGET) return firstPass
-
-  const secondPass = await loadSoleScoutBatch(terms, [3, 4], category)
-  const combined = [...firstPass, ...secondPass]
+  const secondPass = await loadSoleScoutBatch(terms,[3,4],category)
+  const combined = [...firstPass,...secondPass]
   if (combined.length >= EARLY_EXIT_TARGET) return combined
-
-  const finalPass = await loadSoleScoutBatch(terms, [5], category)
-  return [...combined, ...finalPass]
+  return [...combined,...await loadSoleScoutBatch(terms,[5],category)]
 }
 
-function normalizeBeauty(item: BeautyProduct, category: string): Product | null {
+function normalizeBeauty(item: BeautyProduct, category:string): Product | null {
   const title = item.product_name?.trim() || ''
-  const images = uniqueExternalImages([item.image_front_url, item.image_url, item.image_packaging_url, item.image_ingredients_url])
+  const images = uniqueExternalImages([item.image_front_url,item.image_url,item.image_packaging_url,item.image_ingredients_url])
   if (!title || !images.length) return null
-
   const seedKey = item.code || `${title}:${item.brands ?? ''}`
   const seed = stableHash(seedKey)
-  return {
-    id: stableNumericId(870000, seedKey),
-    title,
-    description: `${item.brands ? `${item.brands}. ` : ''}${item.categories || category.replace('womens-', '').replaceAll('-', ' ')}${item.quantity ? ` · ${item.quantity}` : ''}`,
-    category,
-    price: 8 + (seed % 65),
-    discountPercentage: deterministicDiscount(seed, 8, 27),
-    rating: 4 + (seed % 10) / 10,
-    stock: deterministicStock(seed),
-    brand: item.brands?.split(',')[0]?.trim() || 'Beauty Edit',
-    thumbnail: images[0],
-    images,
-    tags: ['women', 'beauty', category.replace('womens-', '')],
-    gender: 'women',
-    source: 'openbeauty',
-    sourceId: seedKey,
-    sourceLabel: 'Open Beauty Facts deep catalog',
-    sizes: ['One Size'],
-  }
+  return { id:stableNumericId(870000,seedKey), title, description:`${item.brands ? `${item.brands}. ` : ''}${item.categories || category.replace('womens-','').replaceAll('-',' ')}${item.quantity ? ` · ${item.quantity}` : ''}`, category, price:8+(seed%65), discountPercentage:deterministicDiscount(seed,8,27), rating:4+(seed%10)/10, stock:deterministicStock(seed), brand:item.brands?.split(',')[0]?.trim() || 'Beauty Edit', thumbnail:images[0], images, tags:['women','beauty',category.replace('womens-','')], gender:'women', source:'openbeauty', sourceId:seedKey, sourceLabel:'Open Beauty Facts deep catalog', sizes:['One Size'] }
 }
 
-async function loadBeautyBatch(terms: string[], pages: number[], category: string) {
-  const fields = 'code,product_name,brands,categories,quantity,image_url,image_front_url,image_ingredients_url,image_packaging_url'
-  const requests = terms.flatMap((term) => pages.map(async (page) => {
-    const url = `/catalog-source/openbeauty?categories_tags_en=${encodeURIComponent(term)}&page=${page}&page_size=80&fields=${fields}`
-    const payload = await fetchProviderJson<BeautyPayload>(url)
-    return (payload.products ?? []).map((item) => normalizeBeauty(item, category)).filter((item): item is Product => Boolean(item))
-  }))
-  const settled = await Promise.allSettled(requests)
+async function loadBeautyBatch(terms:string[], pages:number[], category:string) {
+  const fields='code,product_name,brands,categories,quantity,image_url,image_front_url,image_ingredients_url,image_packaging_url'
+  const settled = await Promise.allSettled(terms.flatMap((term) => pages.map(async (page) => {
+    const payload = await fetchProviderJson<BeautyPayload>(`/catalog-source/openbeauty?categories_tags_en=${encodeURIComponent(term)}&page=${page}&page_size=80&fields=${fields}`)
+    return (payload.products ?? []).map((item) => normalizeBeauty(item,category)).filter((item): item is Product => Boolean(item))
+  })))
   return settled.flatMap((result) => result.status === 'fulfilled' ? result.value : [])
 }
 
-async function loadBeautyCategory(category: string) {
+async function loadBeautyCategory(category:string) {
   const terms = BEAUTY_TERMS[category] ?? []
   if (!terms.length) return []
-
-  const firstPass = await loadBeautyBatch(terms, [1], category)
+  const firstPass = await loadBeautyBatch(terms,[1],category)
   if (firstPass.length >= EARLY_EXIT_TARGET) return firstPass
-
-  const secondPass = await loadBeautyBatch(terms, [2], category)
-  const combined = [...firstPass, ...secondPass]
+  const secondPass = await loadBeautyBatch(terms,[2],category)
+  const combined=[...firstPass,...secondPass]
   if (combined.length >= EARLY_EXIT_TARGET) return combined
-
-  const finalPass = await loadBeautyBatch(terms, [3], category)
-  return [...combined, ...finalPass]
+  return [...combined,...await loadBeautyBatch(terms,[3],category)]
 }
 
-function dedupe(products: Product[]) {
-  const seen = new Set<string>()
-  const seenImages = new Set<string>()
-  const accepted: Product[] = []
+function dedupe(products:Product[]) {
+  const seen=new Set<string>(); const seenImages=new Set<string>(); const accepted:Product[]=[]
   for (const product of products) {
-    const key = `${(product.brand ?? '').toLowerCase()}::${product.title.toLowerCase().replace(/[^a-z0-9]+/g, ' ')}`
-    const imageKey = product.thumbnail.toLowerCase()
+    const key=`${(product.brand ?? '').toLowerCase()}::${product.title.toLowerCase().replace(/[^a-z0-9]+/g,' ')}`
+    const imageKey=product.thumbnail.toLowerCase()
     if (seen.has(key) || seenImages.has(imageKey)) continue
-    seen.add(key)
-    seenImages.add(imageKey)
-    accepted.push(product)
+    seen.add(key); seenImages.add(imageKey); accepted.push(product)
     if (accepted.length >= TARGET_PER_CATEGORY) break
   }
   return accepted
 }
 
-export async function fetchCategoryExpansion(category: string): Promise<Product[]> {
-  const cached = memoryCache.get(category)
+export async function fetchCategoryExpansion(category:string): Promise<Product[]> {
+  const cached=memoryCache.get(category)
   if (cached && cached.expires > Date.now()) return cached.products
-
-  const [fashion, beauty, shopify, ethnic] = await Promise.all([
-    loadFashionCategory(category),
-    loadBeautyCategory(category),
-    fetchMockShopCategory(category).catch(() => []),
-    category === 'womens-ethnicwear' ? fetchVaanzariEthnic().catch(() => []) : Promise.resolve([]),
+  const [fashion,beauty,shopify,ethnic] = await Promise.all([
+    loadFashionCategory(category), loadBeautyCategory(category), fetchMockShopCategory(category).catch(()=>[]), category === 'womens-ethnicwear' ? fetchVaanzariEthnic().catch(()=>[]) : Promise.resolve([]),
   ])
-  const products = dedupe([...ethnic, ...shopify, ...fashion, ...beauty])
-  memoryCache.set(category, { expires: Date.now() + CATEGORY_CACHE_TTL, products })
+  const products=dedupe([...ethnic,...shopify,...fashion,...beauty])
+  memoryCache.set(category,{expires:Date.now()+CATEGORY_CACHE_TTL,products})
   return products
 }
 
-export function clearCategoryExpansionCache() {
-  memoryCache.clear()
-}
+export function clearCategoryExpansionCache(){ memoryCache.clear() }
