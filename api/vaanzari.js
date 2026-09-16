@@ -11,7 +11,7 @@ export default async function handler(request, response) {
     const value = requestUrl.searchParams.get(key)
     if (value?.trim()) params.set(key, value.trim())
   }
-  if (!params.has('limit')) params.set('limit', '100')
+  if (!params.has('limit')) params.set('limit', '50')
 
   try {
     const upstream = await fetch(`https://vaanzari.com/api/sarees?${params.toString()}`, {
