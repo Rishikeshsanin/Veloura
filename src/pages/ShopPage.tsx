@@ -10,6 +10,21 @@ import type { Product } from '../types'
 
 const PAGE_SIZE = 36
 const sizeOrder = ['XS','S','M','L','XL','XXL','26','28','30','32','34','36','37','38','39','40','41','One Size']
+const CATEGORY_EDITS: Record<string, Array<{label:string; query:string}>> = {
+  'womens-dresses': [{label:'Mini',query:'mini dress'},{label:'Midi',query:'midi dress'},{label:'Maxi',query:'maxi dress'},{label:'Party',query:'party dress'},{label:'Work',query:'work dress'},{label:'Vacation',query:'vacation dress'}],
+  'womens-tops': [{label:'Shirts',query:'women shirt'},{label:'Blouses',query:'women blouse'},{label:'Tees',query:'women tee'},{label:'Crop tops',query:'crop top'},{label:'Camisoles',query:'camisole'}],
+  'womens-ethnicwear': [{label:'Sarees',query:'saree'},{label:'Kurtas',query:'kurta'},{label:'Anarkalis',query:'anarkali'},{label:'Lehengas',query:'lehenga'},{label:'Festive sets',query:'festive ethnic set'}],
+  'womens-shoes': [{label:'Sneakers',query:'women sneakers'},{label:'Heels',query:'women heels'},{label:'Flats',query:'women flats'},{label:'Sandals',query:'women sandals'},{label:'Boots',query:'women boots'},{label:'Loafers',query:'women loafers'}],
+  'womens-bags': [{label:'Totes',query:'tote bag'},{label:'Shoulder bags',query:'shoulder bag'},{label:'Crossbody',query:'crossbody bag'},{label:'Clutches',query:'clutch'},{label:'Mini bags',query:'mini bag'}],
+  'womens-jewellery': [{label:'Earrings',query:'earrings'},{label:'Necklaces',query:'necklace'},{label:'Bracelets',query:'bracelet'},{label:'Rings',query:'ring'},{label:'Sets',query:'jewellery set'}],
+  'womens-beauty': [{label:'Lip',query:'lipstick'},{label:'Base',query:'foundation'},{label:'Eyes',query:'mascara'},{label:'Cheeks',query:'blush'},{label:'Nails',query:'nail'}],
+  'womens-skincare': [{label:'Cleansers',query:'cleanser'},{label:'Serums',query:'serum'},{label:'Moisturisers',query:'moisturizer'},{label:'SPF',query:'sunscreen'},{label:'Face care',query:'face care'}],
+  'womens-haircare': [{label:'Shampoo',query:'shampoo'},{label:'Conditioner',query:'conditioner'},{label:'Hair oils',query:'hair oil'},{label:'Masks',query:'hair mask'}],
+  'womens-fragrance': [{label:'Perfume',query:'perfume'},{label:'EDP',query:'eau de parfum'},{label:'Body mists',query:'body mist'},{label:'Fresh scents',query:'fresh fragrance'}],
+  'womens-activewear': [{label:'Leggings',query:'women leggings'},{label:'Sports bras',query:'sports bra'},{label:'Training',query:'women training'},{label:'Yoga',query:'yoga set'}],
+  'womens-denim': [{label:'Straight',query:'straight jeans'},{label:'Wide leg',query:'wide leg jeans'},{label:'Jackets',query:'denim jacket'},{label:'Skirts',query:'denim skirt'}],
+  'womens-outerwear': [{label:'Blazers',query:'women blazer'},{label:'Jackets',query:'women jacket'},{label:'Trench',query:'women trench'},{label:'Coats',query:'women coat'}],
+}
 
 export default function ShopPage() {
   const [params, setParams] = useSearchParams()
@@ -27,6 +42,7 @@ export default function ShopPage() {
   const discount = Number(params.get('discount') || 0)
   const brand = params.get('brand') || ''
   const size = params.get('size') || ''
+  const categoryEdits = CATEGORY_EDITS[category] ?? []
 
   useEffect(() => {
     let cancelled = false
@@ -137,7 +153,9 @@ export default function ShopPage() {
 
   return <div className="shop-page container-wide">
     <div className="breadcrumbs"><Link to="/">Home</Link><span>/</span><span>Women</span>{category && <><span>/</span><span>{categoryLabel(category)}</span></>}</div>
-    <section className="shop-hero"><div><span className="eyebrow">WOMEN'S STORE</span><h1>{query ? `Search: “${query}”` : category ? categoryLabel(category) : 'Women’s fashion'}</h1><p>{category ? `A deeper ${categoryLabel(category).toLowerCase()} collection pulled from Veloura’s managed marketplace network.` : 'Dresses, tops, co-ords, ethnic wear, footwear, bags, jewellery, beauty and more—curated only for women.'}</p></div><div className="catalog-count"><strong>{loading ? '—' : visible.length}</strong><span>{expanding ? 'and growing' : 'styles'}</span></div></section>
+    <section className="shop-hero"><div><span className="eyebrow">WOMEN'S STORE</span><h1>{query ? `Search: “${query}”` : category ? categoryLabel(category) : 'Women’s fashion'}</h1><p>{category ? `Discover ${categoryLabel(category).toLowerCase()} across a deeper, quality-filtered Veloura collection.` : 'Dresses, tops, co-ords, ethnic wear, footwear, bags, jewellery, beauty and more—curated only for women.'}</p></div><div className="catalog-count"><strong>{loading ? '—' : visible.length}</strong><span>{expanding ? 'and growing' : 'styles'}</span></div></section>
+
+    {categoryEdits.length > 0 && <section className="collection-edits"><div><span className="eyebrow">SHOP THE EDIT</span><strong>Explore {categoryLabel(category)}</strong></div><div className="collection-edit-chips">{categoryEdits.map((edit) => <Link key={edit.label} className={query.toLowerCase() === edit.query.toLowerCase() ? 'active' : ''} to={`/shop?category=${category}&q=${encodeURIComponent(edit.query)}`}>{edit.label}</Link>)}</div></section>}
 
     <div className="category-chip-row"><Link className={!category ? 'active' : ''} to="/shop">All women</Link>{WOMEN_CATEGORIES.map((item) => <Link className={category === item.value ? 'active' : ''} key={item.value} to={`/shop?category=${item.value}`}>{item.shortLabel || item.label}</Link>)}</div>
 
