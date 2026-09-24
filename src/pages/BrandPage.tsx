@@ -5,7 +5,7 @@ import ProductCard from '../components/ProductCard'
 import ProductSkeleton from '../components/ProductSkeleton'
 import { categoryLabel } from '../data/catalog'
 import { fetchCatalog, searchProducts } from '../lib/api'
-import { scoreTrending } from '../lib/personalization'
+import { productMerchandisingScore } from '../lib/productIntelligence'
 import type { Product } from '../types'
 
 export default function BrandPage() {
@@ -31,7 +31,7 @@ export default function BrandPage() {
         if (matches) seen.add(product.id)
         return matches
       })
-      setProducts(exact.sort((a, b) => scoreTrending(b) - scoreTrending(a)))
+      setProducts(exact.sort((a, b) => productMerchandisingScore(b) - productMerchandisingScore(a)))
       setLoading(false)
     })()
     return () => { cancelled = true }
