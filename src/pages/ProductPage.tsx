@@ -52,7 +52,8 @@ export default function ProductPage() {
         setSize(item.sizes?.[0] || 'M')
         setSimilar(similarProducts(item, categoryCatalog, 18))
         setComplete(completeTheLook(item, baseCatalog, 16))
-        setPicked(recommendForYou(baseCatalog, preferenceSignals, [item.id, ...recentlyViewed.map((entry) => entry.id)], 16))
+        const hasPreferenceSignals = Object.values(preferenceSignals.categories).some((value) => value > 0) || Object.values(preferenceSignals.brands).some((value) => value > 0)
+        setPicked(hasPreferenceSignals ? recommendForYou(baseCatalog, preferenceSignals, [item.id, ...recentlyViewed.map((entry) => entry.id)], 16) : [])
         recordRecentlyViewed(item)
       } else {
         setSimilar([])
