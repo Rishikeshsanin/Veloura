@@ -21,6 +21,7 @@ type ShopState = {
   cartCount: number
   subtotal: number
   clearCart: () => void
+  resetPreferences: () => void
 }
 
 const ShopContext = createContext<ShopState | null>(null)
@@ -91,6 +92,10 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const openQuickView = useCallback((product: Product) => { setQuickViewProduct(product); recordSignal(product, .6) }, [recordSignal])
   const closeQuickView = useCallback(() => setQuickViewProduct(null), [])
   const clearCart = useCallback(() => setCart([]), [])
+  const resetPreferences = useCallback(() => {
+    setPreferenceSignals({ categories: {}, brands: {}, colors: {}, occasions: {} })
+    setActionToast('Style preferences reset')
+  }, [])
 
   const value = useMemo(() => ({
     cart, wishlist, recentlyViewed, quickViewProduct, preferenceSignals, actionToast,
@@ -98,8 +103,8 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     isWishlisted: (productId: number) => wishlist.some((p) => p.id === productId),
     cartCount: cart.reduce((sum, item) => sum + item.quantity, 0),
     subtotal: cart.reduce((sum, item) => sum + getProductPricing(item.product).selling * item.quantity, 0),
-    clearCart,
-  }), [cart, wishlist, recentlyViewed, quickViewProduct, preferenceSignals, actionToast, addToCart, removeFromCart, updateQuantity, toggleWishlist, recordRecentlyViewedWithSignal, openQuickView, closeQuickView, clearCart])
+    clearCart, resetPreferences,
+  }), [cart, wishlist, recentlyViewed, quickViewProduct, preferenceSignals, actionToast, addToCart, removeFromCart, updateQuantity, toggleWishlist, recordRecentlyViewedWithSignal, openQuickView, closeQuickView, clearCart, resetPreferences])
 
   return <ShopContext.Provider value={value}>{children}</ShopContext.Provider>
 }
