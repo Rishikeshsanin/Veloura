@@ -19,7 +19,7 @@ export default function SearchOverlay({ open, onClose }: { open: boolean; onClos
   const [query, setQuery] = useState('')
   const [catalog, setCatalog] = useState<Product[]>([])
   const [recent, setRecent] = useState<string[]>(readRecent)
-  const [activeIndex,setActiveIndex] = useState(-1)
+  const [,setActiveIndex] = useState(-1)
   const inputRef = useRef<HTMLInputElement>(null)
   const panelRef = useRef<HTMLElement>(null)
   const resultRefs = useRef<Array<HTMLButtonElement | null>>([])
@@ -71,8 +71,8 @@ export default function SearchOverlay({ open, onClose }: { open: boolean; onClos
   if (!open) return null
 
   return <div className="search-overlay" onMouseDown={onClose}>
-    <section ref={panelRef} className="search-overlay-panel" tabIndex={-1} role="dialog" aria-modal="true" aria-label="Search Veloura" onMouseDown={(event) => event.stopPropagation()}>
-      <div className="search-overlay-head"><form onSubmit={submit}><Search size={21}/><input ref={inputRef} autoFocus value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event)=>{if(event.key==='ArrowDown'){event.preventDefault();moveActive(1)}if(event.key==='ArrowUp'){event.preventDefault();moveActive(-1)}}} placeholder="Search dresses, brands, beauty, bags and more" aria-label="Search Veloura"/><button type="submit">Search</button></form><button className="search-overlay-close" onClick={onClose}><X size={20}/></button></div>
+    <section ref={panelRef} className="search-overlay-panel" tabIndex={-1} role="dialog" aria-modal="true" aria-label="Search Veloura" onKeyDown={(event)=>{if(event.key==='ArrowDown'){event.preventDefault();moveActive(1)}if(event.key==='ArrowUp'){event.preventDefault();moveActive(-1)}}} onMouseDown={(event) => event.stopPropagation()}>
+      <div className="search-overlay-head"><form onSubmit={submit}><Search size={21}/><input ref={inputRef} autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search dresses, brands, beauty, bags and more" aria-label="Search Veloura"/><button type="submit">Search</button></form><button className="search-overlay-close" onClick={onClose}><X size={20}/></button></div>
       {!normalized ? <div className="search-start-grid">
         <div><h3><Sparkles size={16}/> Trending now</h3><div className="search-chips">{TRENDING.map((item) => <button key={item} onClick={() => go(item)}>{item}</button>)}</div></div>
         <div><h3><Clock3 size={16}/> Recent searches</h3>{recent.length ? <div className="recent-searches">{recent.map((item) => <button key={item} onClick={() => go(item)}>{item}<ArrowRight size={14}/></button>)}</div> : <p className="search-muted">Your recent searches will appear here.</p>}</div>
