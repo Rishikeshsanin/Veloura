@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { formatINR, getProductPricing } from '../lib/money'
 import { defaultProductSize, productSizes } from '../lib/sizing'
+import { productImageMode } from '../lib/productIntelligence'
 import { useShop } from '../store/ShopContext'
 
 export default function QuickViewModal() {
@@ -30,18 +31,19 @@ export default function QuickViewModal() {
   const pricing = getProductPricing(product)
   const wished = isWishlisted(product.id)
   const href = `/product/${product.id}?category=${encodeURIComponent(product.category)}`
+  const imageMode = productImageMode(product)
 
   return <div className="quick-view-backdrop" onMouseDown={closeQuickView} role="presentation">
     <section className="quick-view-modal" role="dialog" aria-modal="true" aria-label={`Quick view ${product.title}`} onMouseDown={(event) => event.stopPropagation()}>
       <button className="quick-view-close" aria-label="Close quick view" onClick={closeQuickView}><X size={20}/></button>
       <div className="quick-view-gallery">
-        <div className="quick-view-main"><img src={images[imageIndex] || product.thumbnail} alt={product.title}/></div>
+        <div className={`quick-view-main image-mode-${imageMode}`}><img src={images[imageIndex] || product.thumbnail} alt={product.title}/></div>
         {images.length > 1 && <div className="quick-view-thumbs">{images.map((src, index) => <button key={src} className={index === imageIndex ? 'active' : ''} onClick={() => setImageIndex(index)}><img src={src} alt=""/></button>)}</div>}
       </div>
       <div className="quick-view-copy">
         <span className="eyebrow">{product.brand || 'VELOURA EDIT'}</span>
         <h2>{product.title}</h2>
-        <div className="quick-view-rating"><Star size={14} fill="currentColor"/> {(product.rating ?? 4.5).toFixed(1)} <span>· {product.reviews?.length || 128} ratings</span></div>
+        {product.rating !== undefined && <div className="quick-view-rating"><Star size={14} fill="currentColor"/> {product.rating.toFixed(1)} <span>{product.reviews?.length ? `· ${product.reviews.length} written reviews` : '· Catalog rating'}</span></div>}
         <p>{product.description}</p>
         <div className="quick-view-price"><strong>{formatINR(pricing.selling)}</strong>{pricing.discount > 0 && <><s>{formatINR(pricing.mrp)}</s><span>{pricing.discount}% off</span></>}</div>
         <small className="tax-note">inclusive of all taxes</small>
