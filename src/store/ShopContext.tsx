@@ -1,7 +1,9 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { CartItem, Product } from '../types'
 import { getProductPricing } from '../lib/money'
 import { addProductSignal, EMPTY_PREFERENCE_SIGNALS, type PreferenceSignals } from '../lib/personalization'
+import { loadCloudCommerce, mergeCommerceState, pushCloudCommerce, recordCommerceEvent } from '../lib/cloudCommerce'
+import { useAuth } from './AuthContext'
 import {
   cloneCart,
   createAddressId,
@@ -49,6 +51,8 @@ type ShopState = {
   removeCoupon: () => void
   placeOrder: (address: Address, paymentMethod: PaymentMethod) => Order | null
   cancelOrder: (orderId: string) => void
+  cloudStatus: 'local' | 'syncing' | 'synced' | 'error'
+  syncNow: () => Promise<void>
 }
 
 const ShopContext = createContext<ShopState | null>(null)
@@ -63,6 +67,7 @@ function read<T>(key: string, fallback: T): T {
 }
 
 export function ShopProvider({ children }: { children: ReactNode }) {
+  const { user, loading: authLoading } = useAuth()
   const [cart, setCart] = useState<CartItem[]>(() => read('veloura_cart', []))
   const [wishlist, setWishlist] = useState<Product[]>(() => read('veloura_wishlist', []))
   const [recentlyViewed, setRecentlyViewed] = useState<Product[]>(() => read('veloura_recent', []))
@@ -73,6 +78,10 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null)
   const [preferenceSignals, setPreferenceSignals] = useState<PreferenceSignals>(() => read('veloura_preferences_v1', EMPTY_PREFERENCE_SIGNALS))
   const [actionToast, setActionToast] = useState('')
+  const [cloudStatus, setCloudStatus] = useState<'local'|'syncing'|'synced'|'error'>('local')
+  const hydratedUserRef = useRef<string | null>(null)
+  const hadAuthenticatedUserRef = useRef(false)
+  const cloudBlockedRef = useRef(false)
 
   useEffect(() => localStorage.setItem('veloura_cart', JSON.stringify(cart)), [cart])
   useEffect(() => localStorage.setItem('veloura_wishlist', JSON.stringify(wishlist)), [wishlist])
@@ -87,6 +96,63 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     const timer = window.setTimeout(() => setActionToast(''), 2200)
     return () => window.clearTimeout(timer)
   }, [actionToast])
+
+  useEffect(() => {
+    if (authLoading) return
+
+    if (!user) {
+      if (hadAuthenticatedUserRef.current) {
+        setCart([])
+        setWishlist([])
+        setRecentlyViewed([])
+        setSavedForLater([])
+        setAddresses([])
+        setOrders([])
+        setPreferenceSignals({ categories: {}, brands: {}, colors: {}, occasions: {} })
+        setCouponCode('')
+      }
+      hydratedUserRef.current = null
+      cloudBlockedRef.current = false
+      setCloudStatus('local')
+      return
+    }
+
+    hadAuthenticatedUserRef.current = true
+    if (hydratedUserRef.current === user.id) return
+
+    let cancelled = false
+    setCloudStatus('syncing')
+    const localState = { cart, savedForLater, wishlist, addresses, orders, recentlyViewed, preferenceSignals }
+
+    loadCloudCommerce(user.id).then(async (cloud) => {
+      if (cancelled) return
+      const merged = mergeCommerceState(localState, cloud)
+      hydratedUserRef.current = user.id
+      cloudBlockedRef.current = false
+      setCart(merged.cart)
+      setSavedForLater(merged.savedForLater)
+      setWishlist(merged.wishlist)
+      setAddresses(merged.addresses)
+      setOrders(merged.orders)
+      setRecentlyViewed(merged.recentlyViewed)
+      setPreferenceSignals(merged.preferenceSignals)
+      await pushCloudCommerce(user.id, merged, {
+        email: user.email,
+        displayName: String(user.user_metadata?.display_name || user.user_metadata?.full_name || ''),
+      })
+      if (!cancelled) setCloudStatus('synced')
+    }).catch(() => {
+      if (cancelled) return
+      hydratedUserRef.current = user.id
+      cloudBlockedRef.current = true
+      setCloudStatus('error')
+    })
+
+    return () => { cancelled = true }
+    // Cloud hydration should run once per authenticated identity.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, authLoading])
+
 
   const subtotal = useMemo(() => cart.reduce((sum, item) => sum + getProductPricing(item.product).selling * item.quantity, 0), [cart])
   const coupon = useMemo<CouponResult | null>(() => couponCode ? evaluateCoupon(couponCode, subtotal, orders.length) : null, [couponCode, subtotal, orders.length])
@@ -109,7 +175,8 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     })
     recordSignal(product, 3)
     setActionToast(`${product.title} added to bag`)
-  }, [recordSignal])
+    if (user) recordCommerceEvent(user.id, 'add_to_bag', { productId: product.id }).catch(() => undefined)
+  }, [recordSignal, user])
 
   const removeFromCart = useCallback((productId: number, size?: string) => setCart((items) => items.filter((item) => !(item.product.id === productId && (!size || item.size === size)))), [])
   const updateQuantity = useCallback((productId: number, size: string, quantity: number) => {
@@ -125,8 +192,9 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     }
     recordSignal(product, 2)
     setActionToast(`${product.title} saved to wishlist`)
+    if (user) recordCommerceEvent(user.id, 'wishlist_add', { productId: product.id }).catch(() => undefined)
     return [...items, product]
-  }), [recordSignal])
+  }), [recordSignal, user])
 
   const recordRecentlyViewed = useCallback((product: Product) => setRecentlyViewed((items) => {
     const next = [product, ...items.filter((item) => item.id !== product.id)].slice(0, 18)
@@ -232,8 +300,9 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     setCart([])
     setCouponCode('')
     setActionToast(`Order ${order.id} placed`)
+    if (user) recordCommerceEvent(user.id, 'order_placed', { orderNumber: order.id, metadata: { total: order.total, paymentMethod } }).catch(() => undefined)
     return order
-  }, [cart, couponCode, subtotal, orders.length])
+  }, [cart, couponCode, subtotal, orders.length, user])
 
   const cancelOrder = useCallback((orderId: string) => {
     setOrders((current) => current.map((order) => {
@@ -243,6 +312,33 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     setActionToast('Order cancelled')
   }, [])
 
+  const syncNow = useCallback(async () => {
+    if (!user) return
+    setCloudStatus('syncing')
+    try {
+      await pushCloudCommerce(user.id, {
+        cart, savedForLater, wishlist, addresses, orders, recentlyViewed, preferenceSignals,
+      }, {
+        email: user.email,
+        displayName: String(user.user_metadata?.display_name || user.user_metadata?.full_name || ''),
+      })
+      cloudBlockedRef.current = false
+      setCloudStatus('synced')
+    } catch {
+      cloudBlockedRef.current = true
+      setCloudStatus('error')
+    }
+  }, [user, cart, savedForLater, wishlist, addresses, orders, recentlyViewed, preferenceSignals])
+
+  useEffect(() => {
+    if (!user || hydratedUserRef.current !== user.id || cloudBlockedRef.current) return
+    setCloudStatus('syncing')
+    const timer = window.setTimeout(() => {
+      syncNow().catch(() => undefined)
+    }, 700)
+    return () => window.clearTimeout(timer)
+  }, [user?.id, cart, savedForLater, wishlist, addresses, orders, recentlyViewed, preferenceSignals, syncNow])
+
   const value = useMemo(() => ({
     cart, wishlist, recentlyViewed, savedForLater, addresses, orders, quickViewProduct, preferenceSignals, actionToast, coupon,
     addToCart, removeFromCart, updateQuantity, toggleWishlist, recordRecentlyViewed: recordRecentlyViewedWithSignal, openQuickView, closeQuickView,
@@ -250,8 +346,8 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     cartCount: cart.reduce((sum, item) => sum + item.quantity, 0),
     subtotal,
     clearCart, resetPreferences, saveForLater, moveSavedToCart, removeSaved,
-    addAddress, removeAddress, setDefaultAddress, applyCoupon, removeCoupon, placeOrder, cancelOrder,
-  }), [cart, wishlist, recentlyViewed, savedForLater, addresses, orders, quickViewProduct, preferenceSignals, actionToast, coupon, subtotal, addToCart, removeFromCart, updateQuantity, toggleWishlist, recordRecentlyViewedWithSignal, openQuickView, closeQuickView, clearCart, resetPreferences, saveForLater, moveSavedToCart, removeSaved, addAddress, removeAddress, setDefaultAddress, applyCoupon, removeCoupon, placeOrder, cancelOrder])
+    addAddress, removeAddress, setDefaultAddress, applyCoupon, removeCoupon, placeOrder, cancelOrder, cloudStatus, syncNow,
+  }), [cart, wishlist, recentlyViewed, savedForLater, addresses, orders, quickViewProduct, preferenceSignals, actionToast, coupon, subtotal, addToCart, removeFromCart, updateQuantity, toggleWishlist, recordRecentlyViewedWithSignal, openQuickView, closeQuickView, clearCart, resetPreferences, saveForLater, moveSavedToCart, removeSaved, addAddress, removeAddress, setDefaultAddress, applyCoupon, removeCoupon, placeOrder, cancelOrder, cloudStatus, syncNow])
 
   return <ShopContext.Provider value={value}>{children}</ShopContext.Provider>
 }
