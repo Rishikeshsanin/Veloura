@@ -6,6 +6,7 @@ import { fetchCatalog } from '../lib/api'
 import { formatINR, getProductPricing } from '../lib/money'
 import { rankCatalogSearch, searchSuggestion } from '../lib/searchIntelligence'
 import type { Product } from '../types'
+import { useFocusTrap } from '../hooks/useFocusTrap'
 
 const TRENDING = ['party dresses', 'workwear', 'sarees', 'heels', 'handbags', 'lipstick', 'skincare', 'fragrance']
 
@@ -20,19 +21,16 @@ export default function SearchOverlay({ open, onClose }: { open: boolean; onClos
   const [recent, setRecent] = useState<string[]>(readRecent)
   const [activeIndex,setActiveIndex] = useState(-1)
   const inputRef = useRef<HTMLInputElement>(null)
+  const panelRef = useRef<HTMLElement>(null)
   const resultRefs = useRef<Array<HTMLButtonElement | null>>([])
 
   useEffect(() => {
     if (!open) return
     void fetchCatalog().then(setCatalog).catch(() => setCatalog([]))
     document.body.classList.add('modal-open')
-    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose() }
-    window.addEventListener('keydown', onKey)
-    return () => {
-      document.body.classList.remove('modal-open')
-      window.removeEventListener('keydown', onKey)
-    }
-  }, [open, onClose])
+    return () => document.body.classList.remove('modal-open')
+  }, [open])
+  useFocusTrap(open,panelRef,onClose)
 
   const normalized = query.trim().toLowerCase()
   const productMatches = useMemo(() => normalized ? rankCatalogSearch(catalog, normalized, 7) : [], [catalog, normalized])
@@ -73,7 +71,7 @@ export default function SearchOverlay({ open, onClose }: { open: boolean; onClos
   if (!open) return null
 
   return <div className="search-overlay" onMouseDown={onClose}>
-    <section className="search-overlay-panel" onMouseDown={(event) => event.stopPropagation()}>
+    <section ref={panelRef} className="search-overlay-panel" tabIndex={-1} role="dialog" aria-modal="true" aria-label="Search Veloura" onMouseDown={(event) => event.stopPropagation()}>
       <div className="search-overlay-head"><form onSubmit={submit}><Search size={21}/><input ref={inputRef} autoFocus value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event)=>{if(event.key==='ArrowDown'){event.preventDefault();moveActive(1)}if(event.key==='ArrowUp'){event.preventDefault();moveActive(-1)}}} placeholder="Search dresses, brands, beauty, bags and more" aria-label="Search Veloura"/><button type="submit">Search</button></form><button className="search-overlay-close" onClick={onClose}><X size={20}/></button></div>
       {!normalized ? <div className="search-start-grid">
         <div><h3><Sparkles size={16}/> Trending now</h3><div className="search-chips">{TRENDING.map((item) => <button key={item} onClick={() => go(item)}>{item}</button>)}</div></div>
