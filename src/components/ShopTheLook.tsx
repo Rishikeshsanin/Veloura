@@ -2,6 +2,7 @@ import { ArrowRight, ShoppingBag, Sparkles } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { formatINR, getProductPricing } from '../lib/money'
+import { defaultProductSize } from '../lib/sizing'
 import { useShop } from '../store/ShopContext'
 import type { Product } from '../types'
 
@@ -32,7 +33,7 @@ export default function ShopTheLook({ products }: { products: Product[] }) {
   if (!looks.length) return null
   const active = looks[Math.min(activeIndex, looks.length - 1)]
 
-  const addLook = () => active.products.forEach((product) => addToCart(product, product.sizes?.[0] || 'M'))
+  const addLook = () => active.products.forEach((product) => addToCart(product, defaultProductSize(product)))
 
   return <section className="shop-look-section container-wide">
     <div className="shop-look-heading">
