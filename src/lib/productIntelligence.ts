@@ -1,5 +1,10 @@
 import type { Product } from '../types'
 
+const SIZE_OPTIONAL_CATEGORIES = new Set([
+  'womens-bags','womens-jewellery','womens-watches','womens-sunglasses',
+  'womens-accessories','womens-beauty','womens-skincare','womens-haircare','womens-fragrance',
+])
+
 const CONTAIN_CATEGORIES = new Set([
   'womens-shoes','womens-bags','womens-jewellery','womens-watches',
   'womens-sunglasses','womens-accessories','womens-beauty',
@@ -64,7 +69,7 @@ export function productConfidence(product: Product) {
     product.price > 0,
     Boolean(product.brand),
     Boolean(product.color),
-    Boolean(product.sizes?.length),
+    Boolean(product.sizes?.length) || SIZE_OPTIONAL_CATEGORIES.has(product.category),
     product.rating !== undefined,
   ]
   const complete = checks.filter(Boolean).length
