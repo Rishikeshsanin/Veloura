@@ -8,6 +8,7 @@ import { WOMEN_CATEGORIES, categoryLabel } from '../data/catalog'
 import { fetchCatalog } from '../lib/api'
 import { getProductPricing } from '../lib/money'
 import { recommendForYou, topPreference, trendingProducts } from '../lib/personalization'
+import { productMerchandisingScore } from '../lib/productIntelligence'
 import { useShop } from '../store/ShopContext'
 import type { Product } from '../types'
 
@@ -18,7 +19,7 @@ const occasionCards = [
   { title: 'Vacation Mode', subtitle: 'Easy pieces for going away', slug: 'vacation-mode', image: 'https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=1000&q=92' },
 ]
 
-const inCategories = (products: Product[], categories: string[]) => products.filter((product) => categories.includes(product.category))
+const inCategories = (products: Product[], categories: string[]) => products.filter((product) => categories.includes(product.category)).sort((a,b) => productMerchandisingScore(b) - productMerchandisingScore(a))
 
 export default function HomePage() {
   const [products, setProducts] = useState<Product[]>([])
