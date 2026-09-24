@@ -48,6 +48,7 @@ type ShopState = {
   applyCoupon: (code: string) => CouponResult
   removeCoupon: () => void
   placeOrder: (address: Address, paymentMethod: PaymentMethod) => Order | null
+  cancelOrder: (orderId: string) => void
 }
 
 const ShopContext = createContext<ShopState | null>(null)
@@ -147,35 +148,31 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const saveForLater = useCallback((productId: number, size: string) => {
-    setCart((items) => {
-      const item = items.find((entry) => entry.product.id === productId && entry.size === size)
-      if (!item) return items
-      setSavedForLater((saved) => {
-        const existing = saved.find((entry) => entry.product.id === productId && entry.size === size)
-        return existing ? saved : [...saved, item]
-      })
-      return items.filter((entry) => !(entry.product.id === productId && entry.size === size))
+    const item = cart.find((entry) => entry.product.id === productId && entry.size === size)
+    if (!item) return
+    setSavedForLater((saved) => {
+      const existing = saved.find((entry) => entry.product.id === productId && entry.size === size)
+      return existing ? saved : [...saved, item]
     })
+    setCart((items) => items.filter((entry) => !(entry.product.id === productId && entry.size === size)))
     setActionToast('Saved for later')
-  }, [])
+  }, [cart])
 
   const moveSavedToCart = useCallback((productId: number, size: string) => {
-    setSavedForLater((items) => {
-      const item = items.find((entry) => entry.product.id === productId && entry.size === size)
-      if (!item) return items
-      if (item.product.stock === 0) {
-        setActionToast('This saved item is currently sold out')
-        return items
-      }
-      setCart((cartItems) => {
-        const existing = cartItems.find((entry) => entry.product.id === productId && entry.size === size)
-        if (existing) return cartItems.map((entry) => entry.product.id === productId && entry.size === size ? { ...entry, quantity: entry.quantity + item.quantity } : entry)
-        return [...cartItems, item]
-      })
-      setActionToast('Moved back to bag')
-      return items.filter((entry) => !(entry.product.id === productId && entry.size === size))
+    const item = savedForLater.find((entry) => entry.product.id === productId && entry.size === size)
+    if (!item) return
+    if (item.product.stock === 0) {
+      setActionToast('This saved item is currently sold out')
+      return
+    }
+    setCart((cartItems) => {
+      const existing = cartItems.find((entry) => entry.product.id === productId && entry.size === size)
+      if (existing) return cartItems.map((entry) => entry.product.id === productId && entry.size === size ? { ...entry, quantity: entry.quantity + item.quantity } : entry)
+      return [...cartItems, item]
     })
-  }, [])
+    setSavedForLater((items) => items.filter((entry) => !(entry.product.id === productId && entry.size === size)))
+    setActionToast('Moved back to bag')
+  }, [savedForLater])
 
   const removeSaved = useCallback((productId: number, size: string) => {
     setSavedForLater((items) => items.filter((entry) => !(entry.product.id === productId && entry.size === size)))
@@ -238,6 +235,14 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     return order
   }, [cart, couponCode, subtotal, orders.length])
 
+  const cancelOrder = useCallback((orderId: string) => {
+    setOrders((current) => current.map((order) => {
+      if (order.id !== orderId || !['placed','confirmed'].includes(order.status)) return order
+      return { ...order, status: 'cancelled' as const }
+    }))
+    setActionToast('Order cancelled')
+  }, [])
+
   const value = useMemo(() => ({
     cart, wishlist, recentlyViewed, savedForLater, addresses, orders, quickViewProduct, preferenceSignals, actionToast, coupon,
     addToCart, removeFromCart, updateQuantity, toggleWishlist, recordRecentlyViewed: recordRecentlyViewedWithSignal, openQuickView, closeQuickView,
@@ -245,8 +250,8 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     cartCount: cart.reduce((sum, item) => sum + item.quantity, 0),
     subtotal,
     clearCart, resetPreferences, saveForLater, moveSavedToCart, removeSaved,
-    addAddress, removeAddress, setDefaultAddress, applyCoupon, removeCoupon, placeOrder,
-  }), [cart, wishlist, recentlyViewed, savedForLater, addresses, orders, quickViewProduct, preferenceSignals, actionToast, coupon, subtotal, addToCart, removeFromCart, updateQuantity, toggleWishlist, recordRecentlyViewedWithSignal, openQuickView, closeQuickView, clearCart, resetPreferences, saveForLater, moveSavedToCart, removeSaved, addAddress, removeAddress, setDefaultAddress, applyCoupon, removeCoupon, placeOrder])
+    addAddress, removeAddress, setDefaultAddress, applyCoupon, removeCoupon, placeOrder, cancelOrder,
+  }), [cart, wishlist, recentlyViewed, savedForLater, addresses, orders, quickViewProduct, preferenceSignals, actionToast, coupon, subtotal, addToCart, removeFromCart, updateQuantity, toggleWishlist, recordRecentlyViewedWithSignal, openQuickView, closeQuickView, clearCart, resetPreferences, saveForLater, moveSavedToCart, removeSaved, addAddress, removeAddress, setDefaultAddress, applyCoupon, removeCoupon, placeOrder, cancelOrder])
 
   return <ShopContext.Provider value={value}>{children}</ShopContext.Provider>
 }
