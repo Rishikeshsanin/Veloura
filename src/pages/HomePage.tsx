@@ -2,9 +2,10 @@ import { ArrowRight, BadgePercent, ChevronRight, RotateCcw, ShieldCheck, Sparkle
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import ProductRail from '../components/ProductRail'
-import { WOMEN_CATEGORIES } from '../data/catalog'
+import { WOMEN_CATEGORIES, categoryLabel } from '../data/catalog'
 import { fetchCatalog } from '../lib/api'
 import { getProductPricing } from '../lib/money'
+import { recommendForYou, topPreference, trendingProducts } from '../lib/personalization'
 import { useShop } from '../store/ShopContext'
 import type { Product } from '../types'
 
@@ -15,19 +16,12 @@ const occasionCards = [
   { title: 'Vacation Mode', subtitle: 'Easy pieces for going away', q: 'vacation', image: 'https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=1000&q=92' },
 ]
 
-const brandCards = [
-  { brand: 'Solene Studio', offer: 'MIN. 35% OFF', image: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&w=900&q=90' },
-  { brand: 'Maison V', offer: 'BAGS FROM ₹1,199', image: 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=900&q=90' },
-  { brand: 'Aara', offer: 'FESTIVE EDIT · 40% OFF', image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=900&q=90' },
-  { brand: 'Halo Beauty', offer: 'BEAUTY UNDER ₹999', image: 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&w=900&q=90' },
-]
-
 const inCategories = (products: Product[], categories: string[]) => products.filter((product) => categories.includes(product.category))
 
 export default function HomePage() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
-  const { recentlyViewed, wishlist } = useShop()
+  const { recentlyViewed, wishlist, preferenceSignals } = useShop()
 
   useEffect(() => {
     fetchCatalog().then((catalog) => { setProducts(catalog); setLoading(false) }).catch(() => setLoading(false))
@@ -35,7 +29,7 @@ export default function HomePage() {
 
   const merchandising = useMemo(() => {
     const byDiscount = [...products].sort((a, b) => (b.discountPercentage ?? 0) - (a.discountPercentage ?? 0))
-    const byRating = [...products].sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0))
+    const byRating = trendingProducts(products, 24)
     const under999 = products.filter((product) => getProductPricing(product).selling <= 999)
     const under1499 = products.filter((product) => getProductPricing(product).selling <= 1499)
     const newDrops = [...products].sort((a, b) => b.id - a.id)
@@ -57,6 +51,31 @@ export default function HomePage() {
       covered: new Set(products.map((product) => product.category)).size,
     }
   }, [products])
+
+  const personal = useMemo(() => {
+    const signalWeight = Object.values(preferenceSignals.categories).reduce((sum, value) => sum + value, 0)
+      + Object.values(preferenceSignals.brands).reduce((sum, value) => sum + value, 0)
+    const favoriteCategory = topPreference(preferenceSignals, 'categories')
+    const favoriteBrand = topPreference(preferenceSignals, 'brands')
+    const favoriteColor = topPreference(preferenceSignals, 'colors')
+    const excluded = [...recentlyViewed, ...wishlist].map((product) => product.id)
+    const forYou = signalWeight > 0 ? recommendForYou(products, preferenceSignals, excluded, 18) : []
+    const becauseCategory = favoriteCategory ? products
+      .filter((product) => product.category === favoriteCategory && !excluded.includes(product.id))
+      .sort((a,b) => (b.rating ?? 0) - (a.rating ?? 0))
+      .slice(0,16) : []
+
+    const brandMap = new Map<string, { count: number; product: Product }>()
+    products.forEach((product) => {
+      if (!product.brand) return
+      const current = brandMap.get(product.brand)
+      if (!current) brandMap.set(product.brand, { count: 1, product })
+      else current.count += 1
+    })
+    const topBrands = [...brandMap.entries()].sort((a,b) => b[1].count - a[1].count).slice(0,4)
+
+    return { signalWeight, favoriteCategory, favoriteBrand, favoriteColor, forYou, becauseCategory, topBrands }
+  }, [products, preferenceSignals, recentlyViewed, wishlist])
 
   return <>
     <section className="marketplace-hero container-wide">
@@ -82,13 +101,17 @@ export default function HomePage() {
     {recentlyViewed.length > 0 && <ProductRail eyebrow="PICK UP WHERE YOU LEFT OFF" title="Recently viewed" subtitle="Your latest Veloura discoveries, saved on this device." products={recentlyViewed.slice(0,16)} />}
     {wishlist.length > 0 && <ProductRail eyebrow="YOUR SHORTLIST" title="Saved for later" subtitle="Pieces already on your radar." products={wishlist.slice(0,16)} href="/wishlist" />}
 
+    {!loading && personal.signalWeight > 0 && <section className="style-profile-band container-wide"><div><span className="eyebrow">YOUR VELOURA PROFILE</span><h2>Your store is learning your taste.</h2><p>Recommendations adapt from products you view, save and add to bag. These preference signals stay in this browser.</p></div><div className="style-profile-signals">{personal.favoriteCategory && <span><small>Most explored</small><strong>{categoryLabel(personal.favoriteCategory)}</strong></span>}{personal.favoriteBrand && <span><small>Brand signal</small><strong>{personal.favoriteBrand}</strong></span>}{personal.favoriteColor && <span><small>Colour signal</small><strong>{personal.favoriteColor}</strong></span>}</div></section>}
+    {!loading && personal.forYou.length > 0 && <ProductRail eyebrow="CURATED FOR YOU" title="Your Veloura edit" subtitle="Ranked from your recent browsing, saves and bag activity." products={personal.forYou} />}
+    {!loading && personal.favoriteCategory && personal.becauseCategory.length > 0 && <ProductRail eyebrow="BECAUSE YOU KEEP EXPLORING" title={`More ${categoryLabel(personal.favoriteCategory)}`} subtitle="A deeper edit from the department you come back to most." products={personal.becauseCategory} href={`/shop?category=${personal.favoriteCategory}`} />}
+
     {loading ? <LoadingRail /> : <ProductRail eyebrow="HOT RIGHT NOW" title="Trending now" subtitle="High-rated pieces across the women’s store." products={merchandising.topRated} href="/shop?sort=rating" />}
 
     <section className="occasion-section container-wide"><div className="section-heading simple-heading"><div><span className="eyebrow">DRESS FOR THE PLAN</span><h2>Shop by occasion</h2></div></div><div className="occasion-grid">{occasionCards.map((card) => <Link className="occasion-card" key={card.title} to={`/shop?q=${encodeURIComponent(card.q)}`}><img src={card.image} alt={card.title} loading="lazy" /><div className="occasion-overlay" /><div><span>{card.subtitle}</span><h3>{card.title}</h3><b>Shop the edit <ArrowRight size={15} /></b></div></Link>)}</div></section>
 
     {!loading && <ProductRail eyebrow="THE MARKDOWN EDIT" title="Biggest deals" subtitle="Fresh price drops across the women’s store." products={merchandising.bestDeals} href="/shop?sort=discount" />}
 
-    <section className="brand-deals container-wide"><div className="section-heading simple-heading"><div><span className="eyebrow">LABELS TO KNOW</span><h2>Top brands, better prices</h2></div></div><div className="brand-deal-grid">{brandCards.map((card) => <Link key={card.brand} to={`/shop?q=${encodeURIComponent(card.brand)}`} className="brand-deal-card"><img src={card.image} alt={card.brand} loading="lazy" /><div><span>{card.offer}</span><h3>{card.brand}</h3><b>Explore <ArrowRight size={14} /></b></div></Link>)}</div></section>
+    <section className="brand-deals container-wide"><div className="section-heading simple-heading"><div><span className="eyebrow">BRANDS IN YOUR STORE</span><h2>Explore labels with real catalog depth</h2></div></div><div className="brand-deal-grid">{personal.topBrands.map(([brand, data]) => <Link key={brand} to={`/brand/${encodeURIComponent(brand)}`} className="brand-deal-card"><img src={data.product.images?.[0] || data.product.thumbnail} alt={brand} loading="lazy" /><div><span>{data.count} STYLES LIVE</span><h3>{brand}</h3><b>Open brand store <ArrowRight size={14} /></b></div></Link>)}</div></section>
 
     {!loading && <ProductRail eyebrow="EVERYDAY WINS" title="Under ₹999" subtitle="High rotation, low commitment." products={merchandising.budget} href="/shop?max=999" compact />}
     {!loading && <ProductRail eyebrow="THE DRESS STORE" title="Dresses for every version of tonight" subtitle="Mini, midi, maxi and occasion silhouettes with richer product galleries." products={merchandising.dresses} href="/shop?category=womens-dresses" />}
