@@ -39,7 +39,7 @@ export function productImageMode(product: Product) {
 export function colorSwatch(color?: string) {
   if (!color) return '#d9d2cc'
   const key = color.trim().toLowerCase()
-  return COLOR_MAP[key] ?? (CSS.supports?.('color', key) ? key : '#cfc6c0')
+  return COLOR_MAP[key] ?? (typeof CSS !== 'undefined' && CSS.supports('color', key) ? key : '#cfc6c0')
 }
 
 export function productMerchandisingScore(product: Product) {
