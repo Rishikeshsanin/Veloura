@@ -4,6 +4,7 @@ import { WOMEN_CATEGORIES, categoryLabel } from '../data/catalog'
 import { clearCatalogCache, fetchCatalog, fetchCategoryCatalog, getCatalogDiagnostics } from '../lib/api'
 import type { ProviderHealth } from '../lib/catalog/manager'
 import type { Product } from '../types'
+import { productConfidence, productMerchandisingScore } from '../lib/productIntelligence'
 
 const DEPARTMENT_TARGET = 240
 
@@ -43,22 +44,34 @@ export default function CatalogControlPage() {
     const categories = new Map<string, number>()
     const sources = new Map<string, number>()
     let multiImage = 0
+    let richInfo = 0
+    let weakInfo = 0
+    let scoreTotal = 0
     products.forEach((product) => {
       categories.set(product.category, (categories.get(product.category) || 0) + 1)
       sources.set(product.sourceLabel || product.source || 'Unknown', (sources.get(product.sourceLabel || product.source || 'Unknown') || 0) + 1)
       if ((product.images?.length || 0) >= 2) multiImage += 1
+      const confidence = productConfidence(product)
+      if (confidence.complete >= 7) richInfo += 1
+      if (confidence.complete <= 4) weakInfo += 1
+      scoreTotal += productMerchandisingScore(product)
     })
-    return { categories, sources, multiImage }
+    return { categories, sources, multiImage, richInfo, weakInfo, averageScore: products.length ? scoreTotal / products.length : 0 }
   }, [products])
 
   const auditStats = useMemo(() => {
     const sources = new Map<string, number>()
     let galleries = 0
+    let richInfo = 0
+    let weakInfo = 0
     auditProducts.forEach((product) => {
       sources.set(product.sourceLabel || product.source || 'Unknown', (sources.get(product.sourceLabel || product.source || 'Unknown') || 0) + 1)
       if ((product.images?.length || 0) >= 2) galleries += 1
+      const confidence = productConfidence(product)
+      if (confidence.complete >= 7) richInfo += 1
+      if (confidence.complete <= 4) weakInfo += 1
     })
-    return { sources, galleries }
+    return { sources, galleries, richInfo, weakInfo }
   }, [auditProducts])
 
   const readyProviders = health.filter((provider) => provider.status === 'ready').length
@@ -76,12 +89,21 @@ export default function CatalogControlPage() {
       <Stat icon={<Database/>} label="Unique base products" value={loading ? '—' : products.length.toLocaleString('en-IN')} />
       <Stat icon={<Activity/>} label="Healthy providers" value={loading ? '—' : `${readyProviders}/${health.filter((p) => p.id !== 'curated').length}`} tone={failedProviders ? 'warn' : 'good'} />
       <Stat icon={<Layers3/>} label="Departments live" value={loading ? '—' : `${coveredCategories}/${WOMEN_CATEGORIES.length}`} />
-      <Stat icon={<Images/>} label="Multi-image products" value={loading ? '—' : stats.multiImage.toLocaleString('en-IN')} />
+      <Stat icon={<Images/>} label="Multi-image products" value={loading ? '—' : stats.multiImage.toLocaleString('en-IN')} /><Stat icon={<ShieldCheck/>} label="Rich-info products" value={loading ? '—' : stats.richInfo.toLocaleString('en-IN')} tone={stats.weakInfo ? '' : 'good'} />
+    </section>
+
+    <section className="control-panel quality-health">
+      <div className="control-panel-head"><div><span className="eyebrow">MERCHANDISING QUALITY</span><h2>Catalog information health</h2></div><small>Average quality score {loading ? '—' : stats.averageScore.toFixed(1)}</small></div>
+      <div className="quality-health-grid">
+        <div><span>Rich information</span><strong>{loading ? '—' : stats.richInfo}</strong><small>7–8 key product signals present</small></div>
+        <div><span>Needs enrichment</span><strong>{loading ? '—' : stats.weakInfo}</strong><small>4 or fewer key product signals</small></div>
+        <div><span>Image depth</span><strong>{loading || !products.length ? '—' : `${Math.round((stats.multiImage/products.length)*100)}%`}</strong><small>Products with 2+ real images</small></div>
+      </div>
     </section>
 
     <section className="control-panel department-audit">
       <div className="control-panel-head"><div><span className="eyebrow">DEEP CATALOG QA</span><h2>{DEPARTMENT_TARGET}-style department target</h2></div><label className="audit-select">Audit <select value={auditCategory} onChange={(event) => setAuditCategory(event.target.value)}>{WOMEN_CATEGORIES.map((category) => <option key={category.value} value={category.value}>{category.label}</option>)}</select></label></div>
-      <div className="audit-meter-row"><div className={`audit-score ${auditLoading ? 'loading' : auditPass ? 'pass' : 'warn'}`}><span>{categoryLabel(auditCategory)}</span><strong>{auditLoading ? '…' : auditProducts.length}</strong><small>/ {DEPARTMENT_TARGET} target</small></div><div className="audit-bar"><i style={{width:`${Math.min(100,(auditProducts.length/DEPARTMENT_TARGET)*100)}%`}}/><span>{auditPass ? 'Target reached' : `${Math.max(0,DEPARTMENT_TARGET-auditProducts.length)} more usable styles needed`}</span></div><div className="audit-mini"><span>Real galleries</span><strong>{auditLoading ? '—' : auditStats.galleries}</strong></div></div>
+      <div className="audit-meter-row"><div className={`audit-score ${auditLoading ? 'loading' : auditPass ? 'pass' : 'warn'}`}><span>{categoryLabel(auditCategory)}</span><strong>{auditLoading ? '…' : auditProducts.length}</strong><small>/ {DEPARTMENT_TARGET} target</small></div><div className="audit-bar"><i style={{width:`${Math.min(100,(auditProducts.length/DEPARTMENT_TARGET)*100)}%`}}/><span>{auditPass ? 'Target reached' : `${Math.max(0,DEPARTMENT_TARGET-auditProducts.length)} more usable styles needed`}</span></div><div className="audit-mini"><span>Real galleries</span><strong>{auditLoading ? '—' : auditStats.galleries}</strong></div><div className="audit-mini"><span>Rich info</span><strong>{auditLoading ? '—' : auditStats.richInfo}</strong></div><div className="audit-mini"><span>Needs work</span><strong>{auditLoading ? '—' : auditStats.weakInfo}</strong></div></div>
       {!auditLoading && <div className="audit-source-chips">{[...auditStats.sources.entries()].sort((a,b)=>b[1]-a[1]).map(([source,count]) => <span key={source}><b>{count}</b> {source}</span>)}</div>}
       {!auditLoading && auditProducts.length > 0 && <div className="audit-sample-strip">{auditProducts.slice(0,8).map((product) => <img key={product.id} src={product.thumbnail} alt={product.title} title={`${product.brand || 'Veloura'} — ${product.title}`}/>)}</div>}
     </section>
