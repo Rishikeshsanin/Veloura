@@ -32,6 +32,7 @@ export default function QuickViewModal() {
   const wished = isWishlisted(product.id)
   const href = `/product/${product.id}?category=${encodeURIComponent(product.category)}`
   const imageMode = productImageMode(product)
+  const soldOut = product.stock === 0
 
   return <div className="quick-view-backdrop" onMouseDown={closeQuickView} role="presentation">
     <section className="quick-view-modal" role="dialog" aria-modal="true" aria-label={`Quick view ${product.title}`} onMouseDown={(event) => event.stopPropagation()}>
@@ -48,7 +49,7 @@ export default function QuickViewModal() {
         <div className="quick-view-price"><strong>{formatINR(pricing.selling)}</strong>{pricing.discount > 0 && <><s>{formatINR(pricing.mrp)}</s><span>{pricing.discount}% off</span></>}</div>
         <small className="tax-note">inclusive of all taxes</small>
         <div className="quick-view-size"><div><strong>Select size</strong><Link to={`${href}#size-guide`} onClick={closeQuickView}>Size guide</Link></div><div>{productSizes(product).map((value) => <button key={value} className={size === value ? 'active' : ''} onClick={() => setSize(value)}>{value}</button>)}</div></div>
-        <div className="quick-view-actions"><button className="button primary" onClick={() => addToCart(product, size)}><ShoppingBag size={17}/> Add to bag</button><button className={`button outline ${wished ? 'active' : ''}`} onClick={() => toggleWishlist(product)}><Heart size={17} fill={wished ? 'currentColor' : 'none'}/>{wished ? 'Saved' : 'Wishlist'}</button></div>
+        <div className="quick-view-actions"><button className="button primary" disabled={soldOut} onClick={() => !soldOut && addToCart(product, size)}><ShoppingBag size={17}/> {soldOut ? 'Sold out' : 'Add to bag'}</button><button className={`button outline ${wished ? 'active' : ''}`} onClick={() => toggleWishlist(product)}><Heart size={17} fill={wished ? 'currentColor' : 'none'}/>{wished ? 'Saved' : 'Wishlist'}</button></div>
         <Link className="quick-view-full" to={href} onClick={closeQuickView}>View full product details →</Link>
       </div>
     </section>
