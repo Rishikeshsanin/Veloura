@@ -2,6 +2,7 @@ import { ArrowRight, BadgePercent, ChevronRight, RotateCcw, ShieldCheck, Sparkle
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import ProductRail from '../components/ProductRail'
+import ShopTheLook from '../components/ShopTheLook'
 import { WOMEN_CATEGORIES, categoryLabel } from '../data/catalog'
 import { fetchCatalog } from '../lib/api'
 import { getProductPricing } from '../lib/money'
@@ -10,10 +11,10 @@ import { useShop } from '../store/ShopContext'
 import type { Product } from '../types'
 
 const occasionCards = [
-  { title: 'Party & Night Out', subtitle: 'Dresses that own the room', q: 'party', image: 'https://images.unsplash.com/photo-1566174053879-31528523f8ae?auto=format&fit=crop&w=1000&q=92' },
-  { title: 'Workwear Refresh', subtitle: 'Polished, never predictable', q: 'work', image: 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?auto=format&fit=crop&w=1000&q=92' },
-  { title: 'Festive Dressing', subtitle: 'Modern celebration pieces', q: 'festive', image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=1000&q=92' },
-  { title: 'Vacation Mode', subtitle: 'Easy pieces for going away', q: 'vacation', image: 'https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=1000&q=92' },
+  { title: 'Party & Night Out', subtitle: 'Dresses that own the room', slug: 'after-dark', image: 'https://images.unsplash.com/photo-1566174053879-31528523f8ae?auto=format&fit=crop&w=1000&q=92' },
+  { title: 'Workwear Refresh', subtitle: 'Polished, never predictable', slug: 'soft-tailoring', image: 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?auto=format&fit=crop&w=1000&q=92' },
+  { title: 'Festive Dressing', subtitle: 'Modern celebration pieces', slug: 'modern-festive', image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=1000&q=92' },
+  { title: 'Vacation Mode', subtitle: 'Easy pieces for going away', slug: 'vacation-mode', image: 'https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=1000&q=92' },
 ]
 
 const inCategories = (products: Product[], categories: string[]) => products.filter((product) => categories.includes(product.category))
@@ -105,9 +106,11 @@ export default function HomePage() {
     {!loading && personal.forYou.length > 0 && <ProductRail eyebrow="CURATED FOR YOU" title="Your Veloura edit" subtitle="Ranked from your recent browsing, saves and bag activity." products={personal.forYou} />}
     {!loading && personal.favoriteCategory && personal.becauseCategory.length > 0 && <ProductRail eyebrow="BECAUSE YOU KEEP EXPLORING" title={`More ${categoryLabel(personal.favoriteCategory)}`} subtitle="A deeper edit from the department you come back to most." products={personal.becauseCategory} href={`/shop?category=${personal.favoriteCategory}`} />}
 
+    {!loading && <ShopTheLook products={products} />}
+
     {loading ? <LoadingRail /> : <ProductRail eyebrow="HOT RIGHT NOW" title="Trending now" subtitle="High-rated pieces across the women’s store." products={merchandising.topRated} href="/shop?sort=rating" />}
 
-    <section className="occasion-section container-wide"><div className="section-heading simple-heading"><div><span className="eyebrow">DRESS FOR THE PLAN</span><h2>Shop by occasion</h2></div></div><div className="occasion-grid">{occasionCards.map((card) => <Link className="occasion-card" key={card.title} to={`/shop?q=${encodeURIComponent(card.q)}`}><img src={card.image} alt={card.title} loading="lazy" /><div className="occasion-overlay" /><div><span>{card.subtitle}</span><h3>{card.title}</h3><b>Shop the edit <ArrowRight size={15} /></b></div></Link>)}</div></section>
+    <section className="occasion-section container-wide"><div className="section-heading simple-heading"><div><span className="eyebrow">DRESS FOR THE PLAN</span><h2>Shop by occasion</h2><p>Open a full Veloura edit instead of another generic search page.</p></div><Link to="/edits">View all edits <ArrowRight size={15}/></Link></div><div className="occasion-grid">{occasionCards.map((card) => <Link className="occasion-card" key={card.title} to={`/edit/${card.slug}`}><img src={card.image} alt={card.title} loading="lazy" /><div className="occasion-overlay" /><div><span>{card.subtitle}</span><h3>{card.title}</h3><b>Shop the edit <ArrowRight size={15} /></b></div></Link>)}</div></section>
 
     {!loading && <ProductRail eyebrow="THE MARKDOWN EDIT" title="Biggest deals" subtitle="Fresh price drops across the women’s store." products={merchandising.bestDeals} href="/shop?sort=discount" />}
 
