@@ -42,6 +42,9 @@ export default function ShopPage() {
   const discount = Number(params.get('discount') || 0)
   const brand = params.get('brand') || ''
   const size = params.get('size') || ''
+  const color = params.get('color') || ''
+  const occasion = params.get('occasion') || ''
+  const inStock = params.get('stock') === '1'
   const categoryEdits = CATEGORY_EDITS[category] ?? []
 
   useEffect(() => {
@@ -97,15 +100,19 @@ export default function ShopPage() {
     return () => { cancelled = true }
   }, [query, category])
 
-  useEffect(() => setShown(PAGE_SIZE), [category, query, sort, max, rating, discount, brand, size])
+  useEffect(() => setShown(PAGE_SIZE), [category, query, sort, max, rating, discount, brand, size, color, occasion, inStock])
 
   const facets = useMemo(() => {
     const brandCounts = new Map<string, number>()
     const sizeCounts = new Map<string, number>()
+    const colorCounts = new Map<string, number>()
+    const occasionCounts = new Map<string, number>()
     products.forEach((product) => {
       const label = product.brand?.trim()
       if (label) brandCounts.set(label, (brandCounts.get(label) || 0) + 1)
       ;(product.sizes ?? []).forEach((value) => sizeCounts.set(value, (sizeCounts.get(value) || 0) + 1))
+      if (product.color?.trim()) colorCounts.set(product.color.trim(), (colorCounts.get(product.color.trim()) || 0) + 1)
+      if (product.occasion?.trim()) occasionCounts.set(product.occasion.trim(), (occasionCounts.get(product.occasion.trim()) || 0) + 1)
     })
     const brands = [...brandCounts.entries()].sort((a,b) => b[1] - a[1]).slice(0,18)
     const sizes = [...sizeCounts.entries()].sort((a,b) => {
@@ -115,7 +122,9 @@ export default function ShopPage() {
       if (bi === -1) return -1
       return ai - bi
     })
-    return { brands, sizes }
+    const colors = [...colorCounts.entries()].sort((a,b) => b[1] - a[1]).slice(0,16)
+    const occasions = [...occasionCounts.entries()].sort((a,b) => b[1] - a[1]).slice(0,12)
+    return { brands, sizes, colors, occasions }
   }, [products])
 
   const visible = useMemo(() => {
@@ -126,13 +135,16 @@ export default function ShopPage() {
     if (discount) items = items.filter((p) => (p.discountPercentage ?? 0) >= discount)
     if (brand) items = items.filter((p) => p.brand === brand)
     if (size) items = items.filter((p) => (p.sizes ?? []).includes(size))
+    if (color) items = items.filter((p) => p.color?.toLowerCase() === color.toLowerCase())
+    if (occasion) items = items.filter((p) => p.occasion?.toLowerCase() === occasion.toLowerCase())
+    if (inStock) items = items.filter((p) => p.stock === undefined || p.stock > 0)
     if (sort === 'price-low') items.sort((a,b) => getProductPricing(a).selling - getProductPricing(b).selling)
     if (sort === 'price-high') items.sort((a,b) => getProductPricing(b).selling - getProductPricing(a).selling)
     if (sort === 'rating') items.sort((a,b) => (b.rating ?? 0) - (a.rating ?? 0))
     if (sort === 'discount') items.sort((a,b) => (b.discountPercentage ?? 0) - (a.discountPercentage ?? 0))
     if (sort === 'new') items.sort((a,b) => b.id - a.id)
     return items
-  }, [products, category, query, max, rating, discount, brand, size, sort])
+  }, [products, category, query, max, rating, discount, brand, size, color, occasion, inStock, sort])
 
   const update = (key: string, value: string) => {
     const next = new URLSearchParams(params)
@@ -147,7 +159,7 @@ export default function ShopPage() {
     setParams(next)
   }
 
-  const activeFilterCount = [max !== 12000, Boolean(rating), Boolean(discount), Boolean(brand), Boolean(size)].filter(Boolean).length
+  const activeFilterCount = [max !== 12000, Boolean(rating), Boolean(discount), Boolean(brand), Boolean(size), Boolean(color), Boolean(occasion), inStock].filter(Boolean).length
   const shownCount = Math.min(shown, visible.length)
   const completion = visible.length ? Math.round((shownCount / visible.length) * 100) : 0
 
@@ -159,7 +171,7 @@ export default function ShopPage() {
 
     <div className="category-chip-row"><Link className={!category ? 'active' : ''} to="/shop">All women</Link>{WOMEN_CATEGORIES.map((item) => <Link className={category === item.value ? 'active' : ''} key={item.value} to={`/shop?category=${item.value}`}>{item.shortLabel || item.label}</Link>)}</div>
 
-    <div className="quick-filter-row"><button className={activeFilterCount ? 'has-count' : ''} onClick={() => setFiltersOpen(true)}><SlidersHorizontal size={16}/> Filters{activeFilterCount > 0 && <b>{activeFilterCount}</b>}</button><button className={rating >= 4.5 ? 'active' : ''} onClick={() => update('rating', rating >= 4.5 ? '' : '4.5')}><Sparkles size={14}/> Top rated</button><button className={discount >= 40 ? 'active' : ''} onClick={() => update('discount', discount >= 40 ? '' : '40')}>40%+ off</button><button className={max === 999 ? 'active' : ''} onClick={() => update('max', max === 999 ? '' : '999')}>Under ₹999</button><button className={max === 1499 ? 'active' : ''} onClick={() => update('max', max === 1499 ? '' : '1499')}>Under ₹1,499</button>{brand && <button className="active filter-token" onClick={() => update('brand','')}>{brand}<X size={12}/></button>}{size && <button className="active filter-token" onClick={() => update('size','')}>Size {size}<X size={12}/></button>}</div>
+    <div className="quick-filter-row"><button className={activeFilterCount ? 'has-count' : ''} onClick={() => setFiltersOpen(true)}><SlidersHorizontal size={16}/> Filters{activeFilterCount > 0 && <b>{activeFilterCount}</b>}</button><button className={rating >= 4.5 ? 'active' : ''} onClick={() => update('rating', rating >= 4.5 ? '' : '4.5')}><Sparkles size={14}/> Top rated</button><button className={discount >= 40 ? 'active' : ''} onClick={() => update('discount', discount >= 40 ? '' : '40')}>40%+ off</button><button className={max === 999 ? 'active' : ''} onClick={() => update('max', max === 999 ? '' : '999')}>Under ₹999</button><button className={max === 1499 ? 'active' : ''} onClick={() => update('max', max === 1499 ? '' : '1499')}>Under ₹1,499</button>{brand && <button className="active filter-token" onClick={() => update('brand','')}>{brand}<X size={12}/></button>}{size && <button className="active filter-token" onClick={() => update('size','')}>Size {size}<X size={12}/></button>}{color && <button className="active filter-token" onClick={() => update('color','')}>{color}<X size={12}/></button>}{occasion && <button className="active filter-token" onClick={() => update('occasion','')}>{occasion}<X size={12}/></button>}{inStock && <button className="active filter-token" onClick={() => update('stock','')}>In stock<X size={12}/></button>}</div>
 
     <div className="shop-toolbar"><span aria-live="polite">{loading ? 'Loading women’s store…' : expanding ? `${visible.length} styles · adding more…` : `${visible.length} styles found`}</span><label>Sort by <select value={sort} onChange={(e) => update('sort', e.target.value)}><option value="featured">Recommended</option><option value="new">What’s new</option><option value="rating">Customer rating</option><option value="discount">Better discount</option><option value="price-low">Price: low to high</option><option value="price-high">Price: high to low</option></select><ChevronDown size={15}/></label>{expanding && <i className="catalog-progress" aria-hidden="true" />}</div>
 
@@ -168,6 +180,9 @@ export default function ShopPage() {
         <div className="filter-block"><h3>Category</h3><label><input type="radio" checked={!category} onChange={() => update('category','')}/> All women</label>{WOMEN_CATEGORIES.map((item) => <label key={item.value}><input type="radio" checked={category === item.value} onChange={() => update('category', item.value)}/> {item.label}</label>)}</div>
         {facets.brands.length > 0 && <div className="filter-block filter-scroll"><h3>Brand</h3><label><input type="radio" checked={!brand} onChange={() => update('brand','')}/> All brands</label>{facets.brands.map(([label,count]) => <label key={label}><input type="radio" checked={brand === label} onChange={() => update('brand',label)}/><span>{label}</span><small>{count}</small></label>)}</div>}
         {facets.sizes.length > 0 && <div className="filter-block"><h3>Size</h3><div className="size-filter-grid">{facets.sizes.map(([value,count]) => <button key={value} className={size === value ? 'active' : ''} title={`${count} styles`} onClick={() => update('size', size === value ? '' : value)}>{value}</button>)}</div></div>}
+        {facets.colors.length > 0 && <div className="filter-block"><h3>Colour</h3><div className="smart-filter-list">{facets.colors.map(([value,count]) => <button key={value} className={color === value ? 'active' : ''} onClick={() => update('color', color === value ? '' : value)}><i style={{backgroundColor:value}}/><span>{value}</span><small>{count}</small></button>)}</div></div>}
+        {facets.occasions.length > 0 && <div className="filter-block"><h3>Occasion</h3><div className="smart-filter-list text-only">{facets.occasions.map(([value,count]) => <button key={value} className={occasion === value ? 'active' : ''} onClick={() => update('occasion', occasion === value ? '' : value)}><span>{value}</span><small>{count}</small></button>)}</div></div>}
+        <div className="filter-block"><h3>Availability</h3><label><input type="checkbox" checked={inStock} onChange={() => update('stock', inStock ? '' : '1')}/> In-stock styles only</label></div>
         <div className="filter-block"><h3>Price</h3><input className="range" type="range" min="499" max="12000" step="250" value={Math.min(max,12000)} onChange={(e) => update('max', e.target.value === '12000' ? '' : e.target.value)}/><div className="range-label"><span>₹499</span><strong>₹{max.toLocaleString('en-IN')}</strong></div></div>
         <div className="filter-block"><h3>Discount</h3>{[20,30,40,50].map((value) => <label key={value}><input type="radio" checked={discount === value} onChange={() => update('discount', discount === value ? '' : String(value))}/> {value}% and above</label>)}</div>
         <div className="filter-block"><h3>Rating</h3>{[4.5,4,3.5].map((value) => <label key={value}><input type="radio" checked={rating === value} onChange={() => update('rating', rating === value ? '' : String(value))}/> {value} ★ & above</label>)}</div>
