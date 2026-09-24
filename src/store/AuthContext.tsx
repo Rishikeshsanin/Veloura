@@ -8,10 +8,12 @@ type AuthState = {
   user: User | null
   session: Session | null
   loading: boolean
+  recoveryMode: boolean
   signIn: (email: string, password: string) => Promise<AuthResult>
   signUp: (email: string, password: string, displayName: string) => Promise<AuthResult>
   signOut: () => Promise<void>
   sendPasswordReset: (email: string) => Promise<AuthResult>
+  updatePassword: (password: string) => Promise<AuthResult>
 }
 
 const AuthContext = createContext<AuthState | null>(null)
@@ -30,6 +32,7 @@ async function ensureProfile(user: User) {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
+  const [recoveryMode,setRecoveryMode] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -40,7 +43,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (data.session?.user) ensureProfile(data.session.user).catch(() => undefined)
     })
 
-    const { data: subscription } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const { data: subscription } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      if(event==='PASSWORD_RECOVERY') setRecoveryMode(true)
+      if(event==='SIGNED_OUT') setRecoveryMode(false)
       setSession(nextSession)
       setLoading(false)
       if (nextSession?.user) queueMicrotask(() => ensureProfile(nextSession.user).catch(() => undefined))
@@ -86,20 +91,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const sendPasswordReset = useCallback(async (email: string): Promise<AuthResult> => {
-    const redirectTo = typeof window !== 'undefined' ? window.location.origin + '/account' : undefined
+    const redirectTo = typeof window !== 'undefined' ? window.location.origin + '/login?recovery=1' : undefined
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo })
     return error ? { ok: false, message: error.message } : { ok: true, message: 'Password reset email sent.' }
+  }, [])
+
+  const updatePassword = useCallback(async (password:string):Promise<AuthResult> => {
+    if(password.length<8)return {ok:false,message:'Use at least 8 characters.'}
+    const { error }=await supabase.auth.updateUser({password})
+    if(error)return {ok:false,message:error.message}
+    setRecoveryMode(false)
+    return {ok:true,message:'Password updated.'}
   }, [])
 
   const value = useMemo<AuthState>(() => ({
     user: session?.user ?? null,
     session,
     loading,
+    recoveryMode,
     signIn,
     signUp,
     signOut,
     sendPasswordReset,
-  }), [session, loading, signIn, signUp, signOut, sendPasswordReset])
+    updatePassword,
+  }), [session, loading, recoveryMode, signIn, signUp, signOut, sendPasswordReset, updatePassword])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
