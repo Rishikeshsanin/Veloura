@@ -17,7 +17,7 @@ const megaGroups = [
 export default function Layout() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
-  const { cartCount, wishlist, quickViewProduct } = useShop()
+  const { cartCount, wishlist, quickViewProduct, actionToast } = useShop()
   const location = useLocation()
 
   useEffect(() => {
@@ -35,6 +35,7 @@ export default function Layout() {
     {menuOpen && <div className="mobile-menu-backdrop" onClick={() => setMenuOpen(false)}><aside className="mobile-menu" onClick={(e) => e.stopPropagation()}><div className="mobile-menu-head"><span className="brand">VELOURA<span>WOMEN</span></span><button className="icon-button" onClick={() => setMenuOpen(false)}><X /></button></div><button className="menu-search menu-search-launch" onClick={() => { setMenuOpen(false); setSearchOpen(true) }}><Search size={18} /><span>Search women's fashion</span></button><p className="menu-label">Shop women</p><Link onClick={() => setMenuOpen(false)} to="/shop">New in</Link>{megaGroups.map((group) => <div className="mobile-menu-group" key={group.title}><p className="menu-label">{group.title}</p>{group.values.map((value) => { const category = WOMEN_CATEGORIES.find((item) => item.value === value); return category ? <Link key={value} onClick={() => setMenuOpen(false)} to={`/shop?category=${value}`}>{category.label}</Link> : null })}</div>)}<div className="menu-divider" /><Link onClick={() => setMenuOpen(false)} to="/wishlist">Wishlist</Link><Link onClick={() => setMenuOpen(false)} to="/account">My account</Link><Link onClick={() => setMenuOpen(false)} to="/help/faq">Help & FAQ</Link></aside></div>}
 
     <Suspense fallback={null}>{searchOpen && <SearchOverlay open onClose={() => setSearchOpen(false)} />}{quickViewProduct && <QuickViewModal />}</Suspense>
+    {actionToast && <div className="global-commerce-toast" role="status"><span>VELOURA</span><strong>{actionToast}</strong></div>}
 
     <main><div key={`${location.pathname}${location.search}`} className="route-stage"><Outlet /></div></main>
 
