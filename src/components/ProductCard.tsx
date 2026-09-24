@@ -4,13 +4,13 @@ import { Link } from 'react-router-dom'
 import { categoryLabel } from '../data/catalog'
 import { getProductPricing, formatINR } from '../lib/money'
 import { defaultProductSize } from '../lib/sizing'
+import { productImageMode } from '../lib/productIntelligence'
 import { useShop } from '../store/ShopContext'
 import type { Product } from '../types'
 
 function badgeFor(product: Product) {
-  if ((product.rating ?? 0) >= 4.8) return 'BESTSELLER'
-  if ((product.discountPercentage ?? 0) >= 45) return 'HOT DEAL'
-  if (product.id % 4 === 0) return 'NEW'
+  if (product.rating !== undefined && product.rating >= 4.8) return 'TOP RATED'
+  if ((product.discountPercentage ?? 0) >= 45) return 'PRICE DROP'
   return ''
 }
 
@@ -28,6 +28,7 @@ export default function ProductCard({ product, compact = false }: { product: Pro
   const [secondaryFailed, setSecondaryFailed] = useState(false)
   const [secondaryReady, setSecondaryReady] = useState(false)
   const badge = badgeFor(product)
+  const imageMode = productImageMode(product)
   const productHref = `/product/${product.id}?category=${encodeURIComponent(product.category)}`
 
   useEffect(() => {
@@ -52,7 +53,7 @@ export default function ProductCard({ product, compact = false }: { product: Pro
     setSecondaryReady(false)
   }
 
-  return <article className={`product-card ${compact ? 'compact' : ''}`} data-category={product.category} onMouseEnter={prefetchDetail} onFocus={prefetchDetail}>
+  return <article className={`product-card ${compact ? 'compact' : ''} image-mode-${imageMode}`} data-category={product.category} onMouseEnter={prefetchDetail} onFocus={prefetchDetail}>
     <div className="product-media">
       <Link className="product-image-link" to={productHref} aria-label={product.title}>
         {primaryImage ? <>
@@ -66,7 +67,7 @@ export default function ProductCard({ product, compact = false }: { product: Pro
       <div className="product-card-actions"><button className="quick-view" onClick={() => openQuickView(product)}><Eye size={15}/> Quick view</button><button className="quick-add" onClick={() => addToCart(product, defaultProductSize(product))}><Plus size={15} /> Add</button></div>
     </div>
     <div className="product-copy">
-      <div className="product-brand-row">{product.brand ? <Link className="product-brand brand-link" to={`/brand/${encodeURIComponent(product.brand)}`}>{product.brand}</Link> : <strong className="product-brand">Veloura Edit</strong>}<span className="rating"><Star size={12} fill="currentColor" /> {(product.rating ?? 4.5).toFixed(1)}</span></div>
+      <div className="product-brand-row">{product.brand ? <Link className="product-brand brand-link" to={`/brand/${encodeURIComponent(product.brand)}`}>{product.brand}</Link> : <strong className="product-brand">Veloura Edit</strong>}{product.rating !== undefined && <span className="rating"><Star size={12} fill="currentColor" /> {product.rating.toFixed(1)}</span>}</div>
       <Link className="product-title" to={productHref}>{product.title}</Link>
       <div className="price-line"><strong>{formatINR(selling)}</strong>{discount > 0 && <><s>{formatINR(mrp)}</s><span>({discount}% off)</span></>}</div>
       {product.stock !== undefined && product.stock <= 15 && <p className="stock-note">Only a few left</p>}
