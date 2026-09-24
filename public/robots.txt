@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+Disallow: /account
+Disallow: /login
+Disallow: /wishlist
+Disallow: /cart
+Disallow: /checkout
+Disallow: /orders
+Disallow: /order/
+Disallow: /track-order
+Disallow: /catalog-control
+
+Sitemap: https://veloura-nine-theta.vercel.app/sitemap.xml
