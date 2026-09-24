@@ -9,6 +9,7 @@ import { formatINR, getProductPricing } from '../lib/money'
 import { completeTheLook, similarProducts } from '../lib/recommendations'
 import { recommendForYou } from '../lib/personalization'
 import { defaultProductSize, productSizes } from '../lib/sizing'
+import { colorSwatch, discoverColorways, productConfidence, productImageMode } from '../lib/productIntelligence'
 import { useShop } from '../store/ShopContext'
 import type { Product } from '../types'
 
@@ -23,6 +24,7 @@ export default function ProductPage() {
   const [similar, setSimilar] = useState<Product[]>([])
   const [complete, setComplete] = useState<Product[]>([])
   const [picked, setPicked] = useState<Product[]>([])
+  const [colorways, setColorways] = useState<Product[]>([])
   const [size, setSize] = useState('M')
   const [qty, setQty] = useState(1)
   const [image, setImage] = useState(0)
@@ -57,11 +59,13 @@ export default function ProductPage() {
         setComplete(completeTheLook(item, baseCatalog, 16))
         const hasPreferenceSignals = Object.values(preferenceSignals.categories).some((value) => value > 0) || Object.values(preferenceSignals.brands).some((value) => value > 0)
         setPicked(hasPreferenceSignals ? recommendForYou(baseCatalog, preferenceSignals, [item.id, ...recentlyViewed.map((entry) => entry.id)], 16) : [])
+        setColorways(discoverColorways(item, categoryCatalog, 7))
         recordRecentlyViewed(item)
       } else {
         setSimilar([])
         setComplete([])
         setPicked([])
+        setColorways([])
       }
       setLoading(false)
       setImage(0)
@@ -74,6 +78,7 @@ export default function ProductPage() {
       setSimilar([])
       setComplete([])
       setPicked([])
+      setColorways([])
       setLoading(false)
     })
     return () => { cancelled = true }
@@ -103,6 +108,8 @@ export default function ProductPage() {
   if (!product) return <div className="empty-state standalone"><h2>That piece moved fast.</h2><p>It is no longer available in the women’s catalog.</p><Link className="button primary" to="/shop">Back to shop</Link></div>
 
   const pricing = getProductPricing(product)
+  const confidence = productConfidence(product)
+  const imageMode = productImageMode(product)
   const wished = isWishlisted(product.id)
   const activeView = galleryViews[image] || galleryViews[0]
   const failImage = (src: string) => { setFailedImages((current) => current.includes(src) ? current : [...current, src]); setImage(0) }
@@ -124,14 +131,15 @@ export default function ProductPage() {
       <div className="product-detail">
         <section className={`product-gallery ${galleryViews.length <= 1 ? 'single-gallery' : ''}`}>
           {galleryViews.length > 1 && <div className="thumb-list">{galleryViews.map((view,index) => <button className={index === image ? 'active' : ''} key={view.src} onClick={() => setImage(index)} aria-label={view.label}><img src={view.src} alt="" onError={() => failImage(view.src)} /></button>)}</div>}
-          <div className={`main-product-image ${galleryViews.length === 1 ? 'single-image' : ''}`} onTouchStart={(event) => setTouchStartX(event.touches[0]?.clientX ?? null)} onTouchEnd={(event) => finishSwipe(event.changedTouches[0]?.clientX ?? 0)}>{activeView ? <img src={activeView.src} alt={product.title} onError={() => failImage(activeView.src)} /> : <div className="product-detail-fallback"><ImageOff size={32}/><strong>VELOURA</strong><span>{categoryLabel(product.category)}</span></div>}{pricing.discount > 0 && <span>{pricing.discount}% OFF</span>}{activeView && <button className="gallery-expand" onClick={() => setViewerOpen(true)} aria-label="Open fullscreen gallery"><Maximize2 size={17}/></button>}{galleryViews.length > 1 && <div className="mobile-gallery-nav"><button onClick={previousImage}><ChevronLeft size={18}/></button><b>{image + 1}/{galleryViews.length}</b><button onClick={nextImage}><ChevronRight size={18}/></button></div>}</div>
+          <div className={`main-product-image ${galleryViews.length === 1 ? 'single-image' : ''} image-mode-${imageMode}`} onTouchStart={(event) => setTouchStartX(event.touches[0]?.clientX ?? null)} onTouchEnd={(event) => finishSwipe(event.changedTouches[0]?.clientX ?? 0)}>{activeView ? <img src={activeView.src} alt={product.title} onError={() => failImage(activeView.src)} /> : <div className="product-detail-fallback"><ImageOff size={32}/><strong>VELOURA</strong><span>{categoryLabel(product.category)}</span></div>}{pricing.discount > 0 && <span>{pricing.discount}% OFF</span>}{activeView && <button className="gallery-expand" onClick={() => setViewerOpen(true)} aria-label="Open fullscreen gallery"><Maximize2 size={17}/></button>}{galleryViews.length > 1 && <div className="mobile-gallery-nav"><button onClick={previousImage}><ChevronLeft size={18}/></button><b>{image + 1}/{galleryViews.length}</b><button onClick={nextImage}><ChevronRight size={18}/></button></div>}</div>
         </section>
-        <section className="product-info">{product.brand ? <Link className="eyebrow pdp-brand-link" to={`/brand/${encodeURIComponent(product.brand)}`}>{product.brand} · BRAND STORE</Link> : <span className="eyebrow">VELOURA EDIT</span>}<h1>{product.title}</h1><div className="detail-rating"><span><Star size={15} fill="currentColor"/> {(product.rating ?? 4.5).toFixed(1)}</span><b>{product.reviews?.length ? `${product.reviews.length} written reviews` : 'Catalog rating'}</b></div><p className="detail-description">{product.description}</p><div className="detail-price"><strong>{formatINR(pricing.selling)}</strong>{pricing.discount > 0 && <><s>{formatINR(pricing.mrp)}</s><span>({pricing.discount}% OFF)</span></>}</div><small className="tax-note">inclusive of all taxes</small>{product.color && <div className="pdp-color-line"><i style={{backgroundColor:product.color}}/><span>Colour</span><strong>{product.color}</strong></div>}
+        <section className="product-info">{product.brand ? <Link className="eyebrow pdp-brand-link" to={`/brand/${encodeURIComponent(product.brand)}`}>{product.brand} · BRAND STORE</Link> : <span className="eyebrow">VELOURA EDIT</span>}<h1>{product.title}</h1>{product.rating !== undefined && <div className="detail-rating"><span><Star size={15} fill="currentColor"/> {product.rating.toFixed(1)}</span><b>{product.reviews?.length ? `${product.reviews.length} written reviews` : 'Catalog rating'}</b></div>}<p className="detail-description">{product.description}</p><div className="detail-price"><strong>{formatINR(pricing.selling)}</strong>{pricing.discount > 0 && <><s>{formatINR(pricing.mrp)}</s><span>({pricing.discount}% OFF)</span></>}</div><small className="tax-note">inclusive of all taxes</small>{product.color && <div className="pdp-color-line"><i style={{backgroundColor:colorSwatch(product.color)}}/><span>Colour</span><strong>{product.color}</strong></div>}{colorways.length > 0 && <div className="pdp-colorways"><div className="detail-label"><strong>OTHER COLOURS</strong><span>{colorways.length} similar colourways</span></div><div>{colorways.map((item) => <Link key={item.id} to={`/product/${item.id}?category=${encodeURIComponent(item.category)}`} aria-label={`${item.color || 'Colour'}: ${item.title}`}><i style={{backgroundColor:colorSwatch(item.color)}}/><span>{item.color}</span></Link>)}</div></div>}
 
           <div className="detail-section" id="size-guide"><div className="detail-label"><strong>SELECT SIZE</strong><button onClick={() => setSizeGuideOpen(true)}>SIZE GUIDE</button></div><div className="detail-sizes">{productSizes(product).map((s) => <button className={s === size ? 'active' : ''} key={s} onClick={() => setSize(s)}>{s}</button>)}</div></div>
           <div className="buy-row"><div className="quantity"><button onClick={() => setQty(Math.max(1,qty-1))}><Minus size={15}/></button><span>{qty}</span><button onClick={() => setQty(qty+1)}><Plus size={15}/></button></div><button className="button primary add-bag" onClick={() => addToCart(product,size,qty)}>Add to bag</button><button className={`button wishlist-detail ${wished ? 'active' : ''}`} onClick={() => toggleWishlist(product)}><Heart size={18} fill={wished ? 'currentColor' : 'none'}/>{wished ? 'Saved' : 'Wishlist'}</button></div>
 
           <div className="delivery-box"><h3>Delivery options</h3><div className="pincode"><MapPin size={18}/><input value={pincode} onChange={(event) => { setPincode(event.target.value.replace(/\D/g,'').slice(0,6)); setDeliveryChecked(false) }} placeholder="Enter 6-digit pincode" inputMode="numeric"/><button disabled={!canCheckDelivery} onClick={() => setDeliveryChecked(true)}>CHECK</button></div>{deliveryChecked && <div className="delivery-result"><strong>Delivery available</strong><span>Final estimate and shipping charge are shown at checkout.</span></div>}<p><Truck size={17}/> Free delivery above ₹1,499</p><p><ShieldCheck size={17}/> Easy 30-day return and exchange on eligible items</p></div>
+          <div className="product-confidence"><div><ShieldCheck size={17}/><span><strong>{confidence.label}</strong><small>{confidence.complete} of {confidence.total} product-data signals available</small></span></div><p>Veloura shows only information supplied or confidently derived from the live catalog. Missing ratings, colours or review counts are left blank rather than invented.</p></div>
           <div className="offer-box"><h3>Best offers</h3><p><b>WELCOME OFFER</b> — Extra 10% off with code <strong>HELLOVELOURA</strong></p><p><b>ORDER OFFER</b> — ₹300 off on orders above ₹1,999</p></div>
           <details open><summary>Product details</summary><p>{product.description}</p>{product.color && <p><strong>Colour:</strong> {product.color}</p>}{product.occasion && <p><strong>Occasion:</strong> {product.occasion}</p>}</details><details><summary>Fit & sizing</summary><p>{product.sizes?.length ? `Available sizes: ${product.sizes.join(', ')}. Use the Veloura size guide as a general reference; brand-specific sizing may vary.` : 'This item uses one-size or provider-specific sizing. Check the size guide before ordering.'}</p></details><details><summary>Material & care</summary><p>Follow the product care label where provided. For delicate finishes, prefer gentle washing, low heat and careful storage.</p></details><details><summary>Shipping & returns</summary><p>Standard delivery is free above ₹1,499. Eligible items can be returned within 30 days; exclusions are explained in the Returns policy.</p><Link to="/help/returns">Read return policy →</Link></details>
           {product.reviews?.length ? <div className="reviews-block"><div className="detail-label"><strong>CUSTOMER REVIEWS</strong><span>{product.reviews.length} reviews</span></div>{product.reviews.slice(0,3).map((review,index) => <article key={`${review.reviewerEmail || review.reviewerName || 'review'}-${index}`}><span><Star size={12} fill="currentColor"/> {review.rating.toFixed(1)}</span><p>{review.comment}</p><small>{review.reviewerName || 'Verified customer'}</small></article>)}</div> : <div className="reviews-empty"><strong>Reviews</strong><p>No written reviews are available for this catalog item yet.</p></div>}
