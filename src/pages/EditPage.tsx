@@ -46,6 +46,7 @@ function EditorialCollection({ slug }: { slug: string }) {
   const edit = getEditorialEdit(slug)
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
+  const [enriching, setEnriching] = useState(false)
 
   useEffect(() => {
     if (!edit) return
@@ -53,15 +54,23 @@ function EditorialCollection({ slug }: { slug: string }) {
     setLoading(true)
     ;(async () => {
       const base = await fetchCatalog().catch(() => [])
-      const direct = base.filter((product) => edit.categories.includes(product.category))
-      const searched = await Promise.all(edit.queries.slice(0,4).map((query) => searchProducts(query).catch(() => [])))
+      const direct = dedupe(base.filter((product) => edit.categories.includes(product.category)))
+        .sort((a,b) => scoreTrending(b) - scoreTrending(a))
+        .slice(0,96)
+      if (cancelled) return
+      setProducts(direct)
+      setLoading(false)
+
+      if (direct.length >= 72) return
+      setEnriching(true)
+      const searched = await Promise.all(edit.queries.slice(0,3).map((query) => searchProducts(query).catch(() => [])))
       if (cancelled) return
       const merged = dedupe([...direct, ...searched.flat()])
         .filter((product) => edit.categories.includes(product.category))
         .sort((a,b) => scoreTrending(b) - scoreTrending(a))
         .slice(0,96)
       setProducts(merged)
-      setLoading(false)
+      setEnriching(false)
     })()
     return () => { cancelled = true }
   }, [edit])
