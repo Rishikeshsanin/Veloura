@@ -7,7 +7,7 @@ import { useShop } from '../store/ShopContext'
 export default function OrderDetailPage() {
   const { orderId = '' } = useParams()
   const [params] = useSearchParams()
-  const { orders } = useShop()
+  const { orders, cancelOrder } = useShop()
   const order = orders.find((item) => item.id === orderId)
 
   if (!order) return <div className="empty-state standalone"><h2>Order not found</h2><p>This order is not stored on this device.</p><Link className="button primary" to="/orders">View orders</Link></div>
@@ -20,7 +20,7 @@ export default function OrderDetailPage() {
 
     {justPlaced && <section className="order-confirmed-banner"><div><Check/></div><span className="eyebrow">ORDER PLACED</span><h1>That look is yours.</h1><p>Your order record is saved. Payment and fulfilment remain in sandbox mode until the production backend and payment provider are activated.</p></section>}
 
-    <div className="order-detail-head"><div><span className="eyebrow">ORDER</span><h1>{order.id}</h1><p>Placed {new Date(order.createdAt).toLocaleString('en-IN',{day:'numeric',month:'short',year:'numeric',hour:'numeric',minute:'2-digit'})}</p></div><button className="button outline" onClick={() => navigator.clipboard?.writeText(order.id)}><Copy size={15}/> Copy ID</button></div>
+    <div className="order-detail-head"><div><span className="eyebrow">ORDER</span><h1>{order.id}</h1><p>Placed {new Date(order.createdAt).toLocaleString('en-IN',{day:'numeric',month:'short',year:'numeric',hour:'numeric',minute:'2-digit'})}</p></div><div className="order-head-actions"><button className="button outline" onClick={() => navigator.clipboard?.writeText(order.id)}><Copy size={15}/> Copy ID</button>{['placed','confirmed'].includes(order.status)&&<button className="button ghost danger-button" onClick={()=>cancelOrder(order.id)}>Cancel order</button>}</div></div>
 
     <div className="order-detail-layout"><div>
       <section className="order-panel"><div className="order-panel-title"><PackageCheck/><div><span>Current status</span><strong>{ORDER_STATUS_META[order.status].label}</strong></div></div><div className="order-timeline">{timeline.map((step,index)=><div key={step.status} className={step.reached?'reached':''}><i>{step.reached?<Check size={12}/>:index+1}</i><div><strong>{step.label}</strong><span>{step.reached?'Recorded':'Expected'} · {new Date(step.expectedAt).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'})}</span><small>{step.detail}</small></div></div>)}</div></section>
