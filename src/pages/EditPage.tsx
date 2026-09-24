@@ -5,7 +5,7 @@ import ProductCard from '../components/ProductCard'
 import ProductSkeleton from '../components/ProductSkeleton'
 import { EDITORIAL_EDITS, getEditorialEdit } from '../data/edits'
 import { fetchCatalog, searchProducts } from '../lib/api'
-import { scoreTrending } from '../lib/personalization'
+import { productMerchandisingScore } from '../lib/productIntelligence'
 import type { Product } from '../types'
 
 function dedupe(products: Product[]) {
@@ -55,7 +55,7 @@ function EditorialCollection({ slug }: { slug: string }) {
     ;(async () => {
       const base = await fetchCatalog().catch(() => [])
       const direct = dedupe(base.filter((product) => edit.categories.includes(product.category)))
-        .sort((a,b) => scoreTrending(b) - scoreTrending(a))
+        .sort((a,b) => productMerchandisingScore(b) - productMerchandisingScore(a))
         .slice(0,96)
       if (cancelled) return
       setProducts(direct)
@@ -67,7 +67,7 @@ function EditorialCollection({ slug }: { slug: string }) {
       if (cancelled) return
       const merged = dedupe([...direct, ...searched.flat()])
         .filter((product) => edit.categories.includes(product.category))
-        .sort((a,b) => scoreTrending(b) - scoreTrending(a))
+        .sort((a,b) => productMerchandisingScore(b) - productMerchandisingScore(a))
         .slice(0,96)
       setProducts(merged)
       setEnriching(false)
