@@ -9,10 +9,10 @@ Veloura V10 introduces a persistent commerce domain in the frontend and a backen
 - Orders can be viewed and tracked on the same device.
 - Payment remains sandbox-only; no card/UPI request is sent.
 
-## Supabase target
-Shared Project Hub may be used only through a dedicated `veloura` schema.
+## Supabase foundation
+Veloura is registered as **Project Hub App 14** with the dedicated schema `veloura`.
 
-Planned server-side objects:
+Provisioned server-side objects:
 - `veloura.profiles`
 - `veloura.addresses`
 - `veloura.orders`
@@ -21,16 +21,21 @@ Planned server-side objects:
 - `veloura.wishlist_items`
 - `veloura.commerce_events`
 
-The migration intentionally enables RLS without public policies. A future server runtime must use a dedicated scoped database role. The shared service-role key is not an application credential.
+The schema is provisioned and every user-facing table has RLS enabled. There are intentionally no public/anon policies, so the browser cannot access these records yet. A future server runtime must use a dedicated scoped database role. The shared service-role key is not an application credential.
 
-## Activation sequence
-1. Verify V10 branch and preview build.
-2. Register Veloura in Project Hub.
-3. Apply the isolated schema migration.
-4. Create a dedicated backend role and grants only for `veloura`.
-5. Add server-side order/account APIs.
-6. Store the dedicated database credential only in Vercel server environment variables.
-7. Add auth sync without changing project-wide OAuth settings.
-8. Verify RLS/security and production fallbacks.
+## Activation status
+Completed:
+1. Repository safety contract.
+2. Project Hub App 14 registration.
+3. Isolated `veloura` schema migration.
+4. Hub resource/schema-version registration.
+5. RLS verification on all seven tables.
 
-Until steps 2–8 are complete, the storefront remains fully functional in local-first mode.
+Still intentionally gated:
+1. Create a dedicated `veloura_backend` login role and scoped grants.
+2. Store that credential in a supported Vercel server environment secret.
+3. Add server-side account/order sync APIs.
+4. Add auth sync without changing project-wide OAuth settings.
+5. Verify server-side ownership checks and production fallbacks.
+
+Until those gated steps are complete, the storefront remains fully functional in local-first mode.
