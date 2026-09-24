@@ -6,6 +6,7 @@ import ProductSkeleton from '../components/ProductSkeleton'
 import { WOMEN_CATEGORIES, categoryLabel } from '../data/catalog'
 import { fetchCatalog, fetchCategoryCatalog, searchProducts } from '../lib/api'
 import { getProductPricing } from '../lib/money'
+import { colorSwatch, productMerchandisingScore } from '../lib/productIntelligence'
 import type { Product } from '../types'
 
 const PAGE_SIZE = 36
@@ -144,6 +145,7 @@ export default function ShopPage() {
     if (color) items = items.filter((p) => p.color?.toLowerCase() === color.toLowerCase())
     if (occasion) items = items.filter((p) => p.occasion?.toLowerCase() === occasion.toLowerCase())
     if (inStock) items = items.filter((p) => p.stock === undefined || p.stock > 0)
+    if (sort === 'featured') items.sort((a,b) => productMerchandisingScore(b) - productMerchandisingScore(a))
     if (sort === 'price-low') items.sort((a,b) => getProductPricing(a).selling - getProductPricing(b).selling)
     if (sort === 'price-high') items.sort((a,b) => getProductPricing(b).selling - getProductPricing(a).selling)
     if (sort === 'rating') items.sort((a,b) => (b.rating ?? 0) - (a.rating ?? 0))
@@ -186,7 +188,7 @@ export default function ShopPage() {
         <div className="filter-block"><h3>Category</h3><label><input type="radio" checked={!category} onChange={() => update('category','')}/> All women</label>{WOMEN_CATEGORIES.map((item) => <label key={item.value}><input type="radio" checked={category === item.value} onChange={() => update('category', item.value)}/> {item.label}</label>)}</div>
         {facets.brands.length > 0 && <div className="filter-block filter-scroll"><h3>Brand</h3><label><input type="radio" checked={!brand} onChange={() => update('brand','')}/> All brands</label>{facets.brands.map(([label,count]) => <label key={label}><input type="radio" checked={brand === label} onChange={() => update('brand',label)}/><span>{label}</span><small>{count}</small></label>)}</div>}
         {facets.sizes.length > 0 && <div className="filter-block"><h3>Size</h3><div className="size-filter-grid">{facets.sizes.map(([value,count]) => <button key={value} className={size === value ? 'active' : ''} title={`${count} styles`} onClick={() => update('size', size === value ? '' : value)}>{value}</button>)}</div></div>}
-        {facets.colors.length > 0 && <div className="filter-block"><h3>Colour</h3><div className="smart-filter-list">{facets.colors.map(([value,count]) => <button key={value} className={color === value ? 'active' : ''} onClick={() => update('color', color === value ? '' : value)}><i style={{backgroundColor:value}}/><span>{value}</span><small>{count}</small></button>)}</div></div>}
+        {facets.colors.length > 0 && <div className="filter-block"><h3>Colour</h3><div className="smart-filter-list">{facets.colors.map(([value,count]) => <button key={value} className={color === value ? 'active' : ''} onClick={() => update('color', color === value ? '' : value)}><i style={{backgroundColor:colorSwatch(value)}}/><span>{value}</span><small>{count}</small></button>)}</div></div>}
         {facets.occasions.length > 0 && <div className="filter-block"><h3>Occasion</h3><div className="smart-filter-list text-only">{facets.occasions.map(([value,count]) => <button key={value} className={occasion === value ? 'active' : ''} onClick={() => update('occasion', occasion === value ? '' : value)}><span>{value}</span><small>{count}</small></button>)}</div></div>}
         <div className="filter-block"><h3>Availability</h3><label><input type="checkbox" checked={inStock} onChange={() => update('stock', inStock ? '' : '1')}/> In-stock styles only</label></div>
         <div className="filter-block"><h3>Price</h3><input className="range" type="range" min="499" max="12000" step="250" value={Math.min(max,12000)} onChange={(e) => update('max', e.target.value === '12000' ? '' : e.target.value)}/><div className="range-label"><span>₹499</span><strong>₹{max.toLocaleString('en-IN')}</strong></div></div>
