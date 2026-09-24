@@ -2,6 +2,7 @@ import { Heart, ShoppingBag, Star, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { formatINR, getProductPricing } from '../lib/money'
+import { defaultProductSize, productSizes } from '../lib/sizing'
 import { useShop } from '../store/ShopContext'
 
 export default function QuickViewModal() {
@@ -13,7 +14,7 @@ export default function QuickViewModal() {
 
   useEffect(() => {
     if (!product) return
-    setSize(product.sizes?.[0] || 'M')
+    setSize(defaultProductSize(product))
     setImageIndex(0)
     document.body.classList.add('modal-open')
     const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') closeQuickView() }
@@ -44,7 +45,7 @@ export default function QuickViewModal() {
         <p>{product.description}</p>
         <div className="quick-view-price"><strong>{formatINR(pricing.selling)}</strong>{pricing.discount > 0 && <><s>{formatINR(pricing.mrp)}</s><span>{pricing.discount}% off</span></>}</div>
         <small className="tax-note">inclusive of all taxes</small>
-        <div className="quick-view-size"><div><strong>Select size</strong><Link to={`${href}#size-guide`} onClick={closeQuickView}>Size guide</Link></div><div>{(product.sizes?.length ? product.sizes : ['XS','S','M','L','XL']).map((value) => <button key={value} className={size === value ? 'active' : ''} onClick={() => setSize(value)}>{value}</button>)}</div></div>
+        <div className="quick-view-size"><div><strong>Select size</strong><Link to={`${href}#size-guide`} onClick={closeQuickView}>Size guide</Link></div><div>{productSizes(product).map((value) => <button key={value} className={size === value ? 'active' : ''} onClick={() => setSize(value)}>{value}</button>)}</div></div>
         <div className="quick-view-actions"><button className="button primary" onClick={() => addToCart(product, size)}><ShoppingBag size={17}/> Add to bag</button><button className={`button outline ${wished ? 'active' : ''}`} onClick={() => toggleWishlist(product)}><Heart size={17} fill={wished ? 'currentColor' : 'none'}/>{wished ? 'Saved' : 'Wishlist'}</button></div>
         <Link className="quick-view-full" to={href} onClick={closeQuickView}>View full product details →</Link>
       </div>
