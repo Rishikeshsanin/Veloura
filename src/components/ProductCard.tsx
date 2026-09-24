@@ -39,6 +39,11 @@ export default function ProductCard({ product, compact = false }: { product: Pro
   const primaryImage = imageCandidates[imageIndex]
   const secondaryImage = imageCandidates[imageIndex + 1]
 
+  const prefetchDetail = () => {
+    void import('../pages/ProductPage')
+    if (secondaryImage && typeof window !== 'undefined') { const preload = new Image(); preload.src = secondaryImage }
+  }
+
   const primaryFailed = () => {
     setPrimaryReady(false)
     setImageIndex((current) => current + 1)
@@ -46,7 +51,7 @@ export default function ProductCard({ product, compact = false }: { product: Pro
     setSecondaryReady(false)
   }
 
-  return <article className={`product-card ${compact ? 'compact' : ''}`} data-category={product.category}>
+  return <article className={`product-card ${compact ? 'compact' : ''}`} data-category={product.category} onMouseEnter={prefetchDetail} onFocus={prefetchDetail}>
     <div className="product-media">
       <Link className="product-image-link" to={productHref} aria-label={product.title}>
         {primaryImage ? <>
