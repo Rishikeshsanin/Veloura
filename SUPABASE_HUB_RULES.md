@@ -31,4 +31,18 @@ Veloura is designed to coexist safely inside the shared Project Hub Supabase pro
 - Stop if a change requires project-wide Auth/OAuth/API configuration or could affect another application.
 
 ## V10 status
-The repository contains the backend-ready schema contract, but production database activation must remain isolated to `veloura` and must not change another app's resources.
+Provisioned and verified:
+- Project Hub App 14 registration for `veloura`
+- dedicated `veloura` schema
+- seven commerce tables
+- RLS enabled on every table
+- schema/table resources registered in Hub metadata
+
+Not activated yet:
+- no dedicated backend login role/credential
+- no public/anon table policies
+- no Project Hub service-role usage
+- no cross-app dependency
+- no project-wide Auth/OAuth changes
+
+The storefront therefore remains local-first until a scoped server credential can be stored safely in Vercel.
