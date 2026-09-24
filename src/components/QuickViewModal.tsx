@@ -1,15 +1,17 @@
 import { Heart, ShoppingBag, Star, X } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { formatINR, getProductPricing } from '../lib/money'
 import { defaultProductSize, productSizes } from '../lib/sizing'
 import { productImageMode } from '../lib/productIntelligence'
 import { useShop } from '../store/ShopContext'
+import { useFocusTrap } from '../hooks/useFocusTrap'
 
 export default function QuickViewModal() {
   const { quickViewProduct: product, closeQuickView, addToCart, toggleWishlist, isWishlisted } = useShop()
   const [size, setSize] = useState('M')
   const [imageIndex, setImageIndex] = useState(0)
+  const modalRef = useRef<HTMLElement>(null)
 
   const images = useMemo(() => product ? Array.from(new Set([...(product.images ?? []), product.thumbnail].filter(Boolean))).slice(0, 6) : [], [product])
 
@@ -18,13 +20,10 @@ export default function QuickViewModal() {
     setSize(defaultProductSize(product))
     setImageIndex(0)
     document.body.classList.add('modal-open')
-    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') closeQuickView() }
-    window.addEventListener('keydown', onKey)
-    return () => {
-      document.body.classList.remove('modal-open')
-      window.removeEventListener('keydown', onKey)
-    }
+    return () => document.body.classList.remove('modal-open')
   }, [product, closeQuickView])
+
+  useFocusTrap(Boolean(product),modalRef,closeQuickView)
 
   if (!product) return null
 
@@ -35,11 +34,11 @@ export default function QuickViewModal() {
   const soldOut = product.stock === 0
 
   return <div className="quick-view-backdrop" onMouseDown={closeQuickView} role="presentation">
-    <section className="quick-view-modal" role="dialog" aria-modal="true" aria-label={`Quick view ${product.title}`} onMouseDown={(event) => event.stopPropagation()}>
+    <section ref={modalRef} className="quick-view-modal" tabIndex={-1} role="dialog" aria-modal="true" aria-label={`Quick view ${product.title}`} onMouseDown={(event) => event.stopPropagation()}>
       <button className="quick-view-close" aria-label="Close quick view" onClick={closeQuickView}><X size={20}/></button>
       <div className="quick-view-gallery">
         <div className={`quick-view-main image-mode-${imageMode}`}><img src={images[imageIndex] || product.thumbnail} alt={product.title}/></div>
-        {images.length > 1 && <div className="quick-view-thumbs">{images.map((src, index) => <button key={src} className={index === imageIndex ? 'active' : ''} onClick={() => setImageIndex(index)}><img src={src} alt=""/></button>)}</div>}
+        {images.length > 1 && <div className="quick-view-thumbs">{images.map((src, index) => <button key={src} aria-label={`Show product image ${index+1}`} className={index === imageIndex ? 'active' : ''} onClick={() => setImageIndex(index)}><img src={src} alt=""/></button>)}</div>}
       </div>
       <div className="quick-view-copy">
         <span className="eyebrow">{product.brand || 'VELOURA EDIT'}</span>
