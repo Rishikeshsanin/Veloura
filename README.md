@@ -30,9 +30,9 @@ Veloura now has a durable local-first commerce layer in addition to the catalog 
 - first-order and threshold coupon validation
 - free-delivery progress and checkout totals from one shared commerce model
 - backward-compatible cart, wishlist, recent-view and personalization storage
-- an isolated `veloura` Supabase migration and repository safety contract ready for server activation
+- Project Hub App 14 with an isolated `veloura` schema, seven RLS-locked commerce tables, and no public policies
 
-Payments remain sandbox-only. Orders created today are real Veloura browser records, not real charges or shipments. Server/database sync is intentionally gated behind the isolated Project Hub activation plan in `docs/V10_BACKEND.md`.
+Payments remain sandbox-only. Orders created today are real Veloura browser records, not real charges or shipments. Server/database sync is intentionally gated behind the scoped-backend activation plan in `docs/V10_BACKEND.md`.
 
 ## Store experience
 
