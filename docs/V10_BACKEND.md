@@ -39,3 +39,6 @@ Still intentionally gated:
 5. Verify server-side ownership checks and production fallbacks.
 
 Until those gated steps are complete, the storefront remains fully functional in local-first mode.
+
+## Release gate
+Every V10 merge must pass the repository TypeScript + Vite production build workflow before `main` is advanced.
