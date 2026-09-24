@@ -10,7 +10,7 @@ import type { Product } from '../types'
 
 export default function BrandPage() {
   const { brand: brandParam = '' } = useParams()
-  const brand = decodeURIComponent(brandParam)
+  const brand = brandParam
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
 
