@@ -2,6 +2,7 @@ import { ChevronLeft, ChevronRight, Heart, ImageOff, MapPin, Maximize2, Minus, P
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import ProductRail from '../components/ProductRail'
+import StyleThisPiece from '../components/StyleThisPiece'
 import { categoryLabel } from '../data/catalog'
 import { fetchCatalog, fetchCategoryCatalog, fetchProduct } from '../lib/api'
 import { formatINR, getProductPricing } from '../lib/money'
@@ -31,6 +32,7 @@ export default function ProductPage() {
   const [viewerOpen, setViewerOpen] = useState(false)
   const [pincode, setPincode] = useState('')
   const [deliveryChecked, setDeliveryChecked] = useState(false)
+  const [touchStartX, setTouchStartX] = useState<number | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -109,6 +111,12 @@ export default function ProductPage() {
 
   const previousImage = () => setImage((current) => (current - 1 + galleryViews.length) % galleryViews.length)
   const nextImage = () => setImage((current) => (current + 1) % galleryViews.length)
+  const finishSwipe = (endX: number) => {
+    if (touchStartX === null || galleryViews.length <= 1) return setTouchStartX(null)
+    const delta = endX - touchStartX
+    if (Math.abs(delta) > 48) delta < 0 ? nextImage() : previousImage()
+    setTouchStartX(null)
+  }
 
   return <>
     <div className="container-wide product-page">
@@ -116,7 +124,7 @@ export default function ProductPage() {
       <div className="product-detail">
         <section className={`product-gallery ${galleryViews.length <= 1 ? 'single-gallery' : ''}`}>
           {galleryViews.length > 1 && <div className="thumb-list">{galleryViews.map((view,index) => <button className={index === image ? 'active' : ''} key={view.src} onClick={() => setImage(index)} aria-label={view.label}><img src={view.src} alt="" onError={() => failImage(view.src)} /></button>)}</div>}
-          <div className={`main-product-image ${galleryViews.length === 1 ? 'single-image' : ''}`}>{activeView ? <img src={activeView.src} alt={product.title} onError={() => failImage(activeView.src)} /> : <div className="product-detail-fallback"><ImageOff size={32}/><strong>VELOURA</strong><span>{categoryLabel(product.category)}</span></div>}{pricing.discount > 0 && <span>{pricing.discount}% OFF</span>}{activeView && <button className="gallery-expand" onClick={() => setViewerOpen(true)} aria-label="Open fullscreen gallery"><Maximize2 size={17}/></button>}{galleryViews.length > 1 && <div className="mobile-gallery-nav"><button onClick={previousImage}><ChevronLeft size={18}/></button><b>{image + 1}/{galleryViews.length}</b><button onClick={nextImage}><ChevronRight size={18}/></button></div>}</div>
+          <div className={`main-product-image ${galleryViews.length === 1 ? 'single-image' : ''}`} onTouchStart={(event) => setTouchStartX(event.touches[0]?.clientX ?? null)} onTouchEnd={(event) => finishSwipe(event.changedTouches[0]?.clientX ?? 0)}>{activeView ? <img src={activeView.src} alt={product.title} onError={() => failImage(activeView.src)} /> : <div className="product-detail-fallback"><ImageOff size={32}/><strong>VELOURA</strong><span>{categoryLabel(product.category)}</span></div>}{pricing.discount > 0 && <span>{pricing.discount}% OFF</span>}{activeView && <button className="gallery-expand" onClick={() => setViewerOpen(true)} aria-label="Open fullscreen gallery"><Maximize2 size={17}/></button>}{galleryViews.length > 1 && <div className="mobile-gallery-nav"><button onClick={previousImage}><ChevronLeft size={18}/></button><b>{image + 1}/{galleryViews.length}</b><button onClick={nextImage}><ChevronRight size={18}/></button></div>}</div>
         </section>
         <section className="product-info">{product.brand ? <Link className="eyebrow pdp-brand-link" to={`/brand/${encodeURIComponent(product.brand)}`}>{product.brand} · BRAND STORE</Link> : <span className="eyebrow">VELOURA EDIT</span>}<h1>{product.title}</h1><div className="detail-rating"><span><Star size={15} fill="currentColor"/> {(product.rating ?? 4.5).toFixed(1)}</span><b>{product.reviews?.length ? `${product.reviews.length} written reviews` : 'Catalog rating'}</b></div><p className="detail-description">{product.description}</p><div className="detail-price"><strong>{formatINR(pricing.selling)}</strong>{pricing.discount > 0 && <><s>{formatINR(pricing.mrp)}</s><span>({pricing.discount}% OFF)</span></>}</div><small className="tax-note">inclusive of all taxes</small>{product.color && <div className="pdp-color-line"><i style={{backgroundColor:product.color}}/><span>Colour</span><strong>{product.color}</strong></div>}
 
@@ -133,6 +141,8 @@ export default function ProductPage() {
     </div>
 
     <div className="mobile-pdp-buy"><div><small>{product.brand || 'Veloura Edit'}</small><strong>{formatINR(pricing.selling)}</strong></div><button className="button primary" onClick={() => addToCart(product,size,qty)}>Add to bag</button></div>
+
+    {complete.length > 0 && <StyleThisPiece product={product} candidates={complete} />}
 
     {similar.length > 0 && <ProductRail eyebrow="SIMILAR STYLES" title="More like this" subtitle="Selected using category, price, brand, colour and style signals." products={similar} href={`/shop?category=${product.category}`}/>} 
     {complete.length > 0 && <ProductRail eyebrow="COMPLETE THE LOOK" title="Style it together" subtitle="Complementary pieces from across the women’s store." products={complete}/>} 
