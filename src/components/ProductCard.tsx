@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { categoryLabel } from '../data/catalog'
 import { getProductPricing, formatINR } from '../lib/money'
+import { defaultProductSize } from '../lib/sizing'
 import { useShop } from '../store/ShopContext'
 import type { Product } from '../types'
 
@@ -62,7 +63,7 @@ export default function ProductCard({ product, compact = false }: { product: Pro
       </Link>
       <div className="product-badges">{badge && <span className="product-badge">{badge}</span>}{discount >= 30 && <span className="sale-pill">{discount}% OFF</span>}</div>
       <button className={`wish-button ${wished ? 'active' : ''}`} aria-label={wished ? 'Remove from wishlist' : 'Add to wishlist'} onClick={() => toggleWishlist(product)}><Heart size={18} strokeWidth={1.8} fill={wished ? 'currentColor' : 'none'} /></button>
-      <div className="product-card-actions"><button className="quick-view" onClick={() => openQuickView(product)}><Eye size={15}/> Quick view</button><button className="quick-add" onClick={() => addToCart(product, product.sizes?.[0] || 'M')}><Plus size={15} /> Add</button></div>
+      <div className="product-card-actions"><button className="quick-view" onClick={() => openQuickView(product)}><Eye size={15}/> Quick view</button><button className="quick-add" onClick={() => addToCart(product, defaultProductSize(product))}><Plus size={15} /> Add</button></div>
     </div>
     <div className="product-copy">
       <div className="product-brand-row">{product.brand ? <Link className="product-brand brand-link" to={`/brand/${encodeURIComponent(product.brand)}`}>{product.brand}</Link> : <strong className="product-brand">Veloura Edit</strong>}<span className="rating"><Star size={12} fill="currentColor" /> {(product.rating ?? 4.5).toFixed(1)}</span></div>
