@@ -2,6 +2,7 @@ import { ArrowRight, BadgePercent, ChevronRight, RotateCcw, ShieldCheck, Sparkle
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import ProductRail from '../components/ProductRail'
+import CampaignStory from '../components/CampaignStory'
 import ShopTheLook from '../components/ShopTheLook'
 import { WOMEN_CATEGORIES, categoryLabel } from '../data/catalog'
 import { fetchCatalog } from '../lib/api'
@@ -90,6 +91,8 @@ export default function HomePage() {
         <Link className="hero-tile" to="/shop?sort=discount"><img src="https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1000&q=92" alt="Women's fashion sale" /><div><small>PRICE DROP</small><strong>Big-store energy, better prices</strong><span>Explore sale <ChevronRight size={15} /></span></div></Link>
       </div>
     </section>
+
+    <CampaignStory />
 
     <section className="trust-strip marketplace-trust"><div><Truck /><span><strong>Free delivery</strong>Above ₹1,499</span></div><div><RotateCcw /><span><strong>Easy returns</strong>30-day window</span></div><div><ShieldCheck /><span><strong>Secure checkout</strong>No payment data stored</span></div><div><Sparkles /><span><strong>Women-only universe</strong>22 structured departments</span></div></section>
 
