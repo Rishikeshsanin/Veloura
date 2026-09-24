@@ -99,6 +99,7 @@ export const ORDER_STATUS_META: Record<OrderStatus, { label: string; detail: str
 const FULFILMENT_STEPS: OrderStatus[] = ['placed','confirmed','packed','shipped','out_for_delivery','delivered']
 
 export function orderTimeline(order: Order) {
+  if (['cancelled','return_requested','returned'].includes(order.status)) return [{ status: order.status, ...ORDER_STATUS_META[order.status], reached: true, expectedAt: order.createdAt }]
   const currentIndex = Math.max(0, FULFILMENT_STEPS.indexOf(order.status))
   const base = new Date(order.createdAt).getTime()
   const offsets = [0, 2, 18, 36, 72, 120].map((hours) => hours * 60 * 60 * 1000)
