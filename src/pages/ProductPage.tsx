@@ -7,6 +7,7 @@ import { fetchCatalog, fetchCategoryCatalog, fetchProduct } from '../lib/api'
 import { formatINR, getProductPricing } from '../lib/money'
 import { completeTheLook, similarProducts } from '../lib/recommendations'
 import { recommendForYou } from '../lib/personalization'
+import { defaultProductSize, productSizes } from '../lib/sizing'
 import { useShop } from '../store/ShopContext'
 import type { Product } from '../types'
 
@@ -49,7 +50,7 @@ export default function ProductPage() {
       if (cancelled) return
       setProduct(item)
       if (item) {
-        setSize(item.sizes?.[0] || 'M')
+        setSize(defaultProductSize(item))
         setSimilar(similarProducts(item, categoryCatalog, 18))
         setComplete(completeTheLook(item, baseCatalog, 16))
         const hasPreferenceSignals = Object.values(preferenceSignals.categories).some((value) => value > 0) || Object.values(preferenceSignals.brands).some((value) => value > 0)
@@ -119,7 +120,7 @@ export default function ProductPage() {
         </section>
         <section className="product-info">{product.brand ? <Link className="eyebrow pdp-brand-link" to={`/brand/${encodeURIComponent(product.brand)}`}>{product.brand} · BRAND STORE</Link> : <span className="eyebrow">VELOURA EDIT</span>}<h1>{product.title}</h1><div className="detail-rating"><span><Star size={15} fill="currentColor"/> {(product.rating ?? 4.5).toFixed(1)}</span><b>{product.reviews?.length ? `${product.reviews.length} written reviews` : 'Catalog rating'}</b></div><p className="detail-description">{product.description}</p><div className="detail-price"><strong>{formatINR(pricing.selling)}</strong>{pricing.discount > 0 && <><s>{formatINR(pricing.mrp)}</s><span>({pricing.discount}% OFF)</span></>}</div><small className="tax-note">inclusive of all taxes</small>{product.color && <div className="pdp-color-line"><i style={{backgroundColor:product.color}}/><span>Colour</span><strong>{product.color}</strong></div>}
 
-          <div className="detail-section" id="size-guide"><div className="detail-label"><strong>SELECT SIZE</strong><button onClick={() => setSizeGuideOpen(true)}>SIZE GUIDE</button></div><div className="detail-sizes">{(product.sizes?.length ? product.sizes : ['XS','S','M','L','XL']).map((s) => <button className={s === size ? 'active' : ''} key={s} onClick={() => setSize(s)}>{s}</button>)}</div></div>
+          <div className="detail-section" id="size-guide"><div className="detail-label"><strong>SELECT SIZE</strong><button onClick={() => setSizeGuideOpen(true)}>SIZE GUIDE</button></div><div className="detail-sizes">{productSizes(product).map((s) => <button className={s === size ? 'active' : ''} key={s} onClick={() => setSize(s)}>{s}</button>)}</div></div>
           <div className="buy-row"><div className="quantity"><button onClick={() => setQty(Math.max(1,qty-1))}><Minus size={15}/></button><span>{qty}</span><button onClick={() => setQty(qty+1)}><Plus size={15}/></button></div><button className="button primary add-bag" onClick={() => addToCart(product,size,qty)}>Add to bag</button><button className={`button wishlist-detail ${wished ? 'active' : ''}`} onClick={() => toggleWishlist(product)}><Heart size={18} fill={wished ? 'currentColor' : 'none'}/>{wished ? 'Saved' : 'Wishlist'}</button></div>
 
           <div className="delivery-box"><h3>Delivery options</h3><div className="pincode"><MapPin size={18}/><input value={pincode} onChange={(event) => { setPincode(event.target.value.replace(/\D/g,'').slice(0,6)); setDeliveryChecked(false) }} placeholder="Enter 6-digit pincode" inputMode="numeric"/><button disabled={!canCheckDelivery} onClick={() => setDeliveryChecked(true)}>CHECK</button></div>{deliveryChecked && <div className="delivery-result"><strong>Delivery available</strong><span>Final estimate and shipping charge are shown at checkout.</span></div>}<p><Truck size={17}/> Free delivery above ₹1,499</p><p><ShieldCheck size={17}/> Easy 30-day return and exchange on eligible items</p></div>
