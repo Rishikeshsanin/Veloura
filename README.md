@@ -34,6 +34,21 @@ Veloura now has a durable local-first commerce layer in addition to the catalog 
 
 Payments remain sandbox-only. Orders created today are real Veloura browser records, not real charges or shipments. Server/database sync is intentionally gated behind the scoped-backend activation plan in `docs/V10_BACKEND.md`.
 
+## V11 accounts and cloud sync
+
+Veloura now supports real customer accounts using Supabase Auth and account-scoped RLS:
+
+- email/password sign-in, sign-up and password reset
+- cross-device bag, saved-for-later, wishlist and address sync
+- synced style signals and recently viewed products
+- synced sandbox order history
+- guest state merges into the account at first sign-in
+- local account caches are cleared on sign-out for shared-device privacy
+- verified-purchase reviews require a delivered Veloura order for the exact product
+- no service-role key, database password or private credential is shipped to the browser
+
+Guest shopping and checkout remain available without an account.
+
 ## Store experience
 
 - Women-only search and navigation
