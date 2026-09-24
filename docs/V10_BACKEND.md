@@ -42,3 +42,29 @@ Until those gated steps are complete, the storefront remains fully functional in
 
 ## Release gate
 Every V10 merge must pass the repository TypeScript + Vite production build workflow before `main` is advanced.
+
+
+## V11 account sync activation
+
+Completed:
+- Supabase email/password authentication using the public publishable key
+- authenticated RLS policies for profiles, addresses, cart, wishlist, orders, order items and commerce events
+- guest-to-account merge instead of destructive replacement
+- cross-device sync for bag, saved-for-later items, wishlist, addresses, style signals, recent browsing and sandbox order history
+- sign-out privacy cleanup on shared devices
+- verified-purchase review table and UI; insertion requires a delivered Veloura order containing the exact product
+- sanitized public review reads only; user IDs are not granted to anonymous readers
+- Data API exposure preserves the previously active schemas and adds only `veloura`
+
+The shared Project Hub service-role key is still not used by Veloura. The browser uses only the Supabase publishable key plus the signed-in user's JWT, and PostgreSQL RLS is the ownership boundary.
+
+### Data API exposure audit
+Before adding Veloura, PostgREST reported 35 cached relations. The existing client-enabled schemas accounted for exactly those 35 relations:
+- `ai_research_os`: 15
+- `closeby`: 6
+- `commercialiq`: 7
+- `koshora`: 7
+
+The manual PostgREST schema list therefore preserves:
+`public, graphql_public, ai_research_os, closeby, commercialiq, koshora`
+and adds only `veloura`.
