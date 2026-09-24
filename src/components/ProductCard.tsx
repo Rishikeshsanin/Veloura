@@ -10,7 +10,6 @@ import type { Product } from '../types'
 
 function badgeFor(product: Product) {
   if (product.rating !== undefined && product.rating >= 4.8) return 'TOP RATED'
-  if ((product.discountPercentage ?? 0) >= 45) return 'PRICE DROP'
   return ''
 }
 
