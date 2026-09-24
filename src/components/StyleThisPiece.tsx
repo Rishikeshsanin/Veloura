@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { formatINR, getProductPricing } from '../lib/money'
 import { defaultProductSize } from '../lib/sizing'
+import { productMerchandisingScore } from '../lib/productIntelligence'
 import { useShop } from '../store/ShopContext'
 import type { Product } from '../types'
 
@@ -13,7 +14,7 @@ const DIRECTIONS = [
 ]
 
 function score(product: Product, mode: number) {
-  let value=(product.rating ?? 4)*5 + Math.min(product.images?.length ?? 0,5)*2
+  let value=productMerchandisingScore(product)
   if (mode===0) value += (product.discountPercentage ?? 0) < 35 ? 4 : 0
   if (mode===1) value += (product.discountPercentage ?? 0) >= 30 ? 3 : 0
   if (mode===2) value += getProductPricing(product).selling <= 2499 ? 4 : 0
@@ -41,8 +42,9 @@ export default function StyleThisPiece({ product, candidates }: { product: Produ
   if(!looks.length) return null
   const look=looks[Math.min(active,looks.length-1)]
   const total=look.products.reduce((sum,item)=>sum+getProductPricing(item).selling,0)
+  const soldOut=look.products.some((item)=>item.stock===0)
 
-  const addLook=()=>look.products.forEach((item)=>addToCart(item,defaultProductSize(item)))
+  const addLook=()=>{ if (soldOut) return; look.products.forEach((item)=>addToCart(item,defaultProductSize(item))) }
 
   return <section className="style-piece container-wide">
     <div className="style-piece-head">
@@ -65,7 +67,7 @@ export default function StyleThisPiece({ product, candidates }: { product: Produ
           {look.products.map((item,index)=>{const price=getProductPricing(item);return <Link key={item.id} to={`/product/${item.id}?category=${encodeURIComponent(item.category)}`}><b>{String(index+1).padStart(2,'0')}</b><span><small>{item.brand||'Veloura Edit'}</small><strong>{item.title}</strong></span><em>{formatINR(price.selling)}</em><ArrowRight size={13}/></Link>})}
         </div>
         <div className="style-piece-total"><span>Complete look</span><strong>{formatINR(total)}</strong></div>
-        <button className="button primary" onClick={addLook}><ShoppingBag size={16}/> Add this look</button>
+        <button className="button primary" disabled={soldOut} onClick={addLook}><ShoppingBag size={16}/> {soldOut ? 'Look unavailable' : 'Add this look'}</button>
       </div>
     </div>
   </section>
