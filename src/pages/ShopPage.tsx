@@ -32,6 +32,7 @@ export default function ShopPage() {
   const [loading, setLoading] = useState(true)
   const [expanding, setExpanding] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(false)
+  const [sortOpen, setSortOpen] = useState(false)
   const [shown, setShown] = useState(PAGE_SIZE)
 
   const category = params.get('category') || ''
@@ -101,6 +102,11 @@ export default function ShopPage() {
   }, [query, category])
 
   useEffect(() => setShown(PAGE_SIZE), [category, query, sort, max, rating, discount, brand, size, color, occasion, inStock])
+  useEffect(() => {
+    if (!filtersOpen && !sortOpen) return
+    document.body.classList.add('modal-open')
+    return () => document.body.classList.remove('modal-open')
+  }, [filtersOpen, sortOpen])
 
   const facets = useMemo(() => {
     const brandCounts = new Map<string, number>()
@@ -171,7 +177,7 @@ export default function ShopPage() {
 
     <div className="category-chip-row"><Link className={!category ? 'active' : ''} to="/shop">All women</Link>{WOMEN_CATEGORIES.map((item) => <Link className={category === item.value ? 'active' : ''} key={item.value} to={`/shop?category=${item.value}`}>{item.shortLabel || item.label}</Link>)}</div>
 
-    <div className="quick-filter-row"><button className={activeFilterCount ? 'has-count' : ''} onClick={() => setFiltersOpen(true)}><SlidersHorizontal size={16}/> Filters{activeFilterCount > 0 && <b>{activeFilterCount}</b>}</button><button className={rating >= 4.5 ? 'active' : ''} onClick={() => update('rating', rating >= 4.5 ? '' : '4.5')}><Sparkles size={14}/> Top rated</button><button className={discount >= 40 ? 'active' : ''} onClick={() => update('discount', discount >= 40 ? '' : '40')}>40%+ off</button><button className={max === 999 ? 'active' : ''} onClick={() => update('max', max === 999 ? '' : '999')}>Under ₹999</button><button className={max === 1499 ? 'active' : ''} onClick={() => update('max', max === 1499 ? '' : '1499')}>Under ₹1,499</button>{brand && <button className="active filter-token" onClick={() => update('brand','')}>{brand}<X size={12}/></button>}{size && <button className="active filter-token" onClick={() => update('size','')}>Size {size}<X size={12}/></button>}{color && <button className="active filter-token" onClick={() => update('color','')}>{color}<X size={12}/></button>}{occasion && <button className="active filter-token" onClick={() => update('occasion','')}>{occasion}<X size={12}/></button>}{inStock && <button className="active filter-token" onClick={() => update('stock','')}>In stock<X size={12}/></button>}</div>
+    <div className="quick-filter-row"><button className={activeFilterCount ? 'has-count' : ''} onClick={() => setFiltersOpen(true)}><SlidersHorizontal size={16}/> Filters{activeFilterCount > 0 && <b>{activeFilterCount}</b>}</button><button className="mobile-sort-trigger mobile-only" onClick={() => setSortOpen(true)}><ChevronDown size={15}/> Sort</button><button className={rating >= 4.5 ? 'active' : ''} onClick={() => update('rating', rating >= 4.5 ? '' : '4.5')}><Sparkles size={14}/> Top rated</button><button className={discount >= 40 ? 'active' : ''} onClick={() => update('discount', discount >= 40 ? '' : '40')}>40%+ off</button><button className={max === 999 ? 'active' : ''} onClick={() => update('max', max === 999 ? '' : '999')}>Under ₹999</button><button className={max === 1499 ? 'active' : ''} onClick={() => update('max', max === 1499 ? '' : '1499')}>Under ₹1,499</button>{brand && <button className="active filter-token" onClick={() => update('brand','')}>{brand}<X size={12}/></button>}{size && <button className="active filter-token" onClick={() => update('size','')}>Size {size}<X size={12}/></button>}{color && <button className="active filter-token" onClick={() => update('color','')}>{color}<X size={12}/></button>}{occasion && <button className="active filter-token" onClick={() => update('occasion','')}>{occasion}<X size={12}/></button>}{inStock && <button className="active filter-token" onClick={() => update('stock','')}>In stock<X size={12}/></button>}</div>
 
     <div className="shop-toolbar"><span aria-live="polite">{loading ? 'Loading women’s store…' : expanding ? `${visible.length} styles · adding more…` : `${visible.length} styles found`}</span><label>Sort by <select value={sort} onChange={(e) => update('sort', e.target.value)}><option value="featured">Recommended</option><option value="new">What’s new</option><option value="rating">Customer rating</option><option value="discount">Better discount</option><option value="price-low">Price: low to high</option><option value="price-high">Price: high to low</option></select><ChevronDown size={15}/></label>{expanding && <i className="catalog-progress" aria-hidden="true" />}</div>
 
@@ -188,7 +194,8 @@ export default function ShopPage() {
         <div className="filter-block"><h3>Rating</h3>{[4.5,4,3.5].map((value) => <label key={value}><input type="radio" checked={rating === value} onChange={() => update('rating', rating === value ? '' : String(value))}/> {value} ★ & above</label>)}</div>
         <button className="button primary mobile-only full" onClick={() => setFiltersOpen(false)}>Show {visible.length} styles</button>
       </aside>
-      {filtersOpen && <div className="filter-backdrop mobile-only" onClick={() => setFiltersOpen(false)}/>} 
+      {filtersOpen && <div className="filter-backdrop mobile-only" onClick={() => setFiltersOpen(false)}/>}
+      {sortOpen && <div className="sort-sheet-backdrop mobile-only" onClick={() => setSortOpen(false)}><section className="sort-sheet" onClick={(event) => event.stopPropagation()}><div className="sort-sheet-head"><div><span className="eyebrow">ORDER THE EDIT</span><strong>Sort products</strong></div><button className="icon-button" onClick={() => setSortOpen(false)}><X/></button></div>{[['featured','Recommended'],['new','What’s new'],['rating','Customer rating'],['discount','Better discount'],['price-low','Price: low to high'],['price-high','Price: high to low']].map(([value,label]) => <button key={value} className={sort===value?'active':''} onClick={() => { update('sort',value); setSortOpen(false) }}><span>{label}</span>{sort===value && <b>Selected</b>}</button>)}</section></div>}
       <section className="catalog-column" aria-busy={loading || expanding}>
         <div className="product-grid shop-grid catalog-grid-stage">{loading ? Array.from({length: 18}).map((_,i) => <ProductSkeleton key={i}/>) : visible.slice(0,shown).map((p) => <ProductCard key={p.id} product={p}/>)}</div>
         {!loading && visible.length === 0 && <div className="empty-state"><span className="empty-mark">V</span><h2>No styles matched</h2><p>Try clearing one filter or exploring another Veloura department.</p><button className="button outline" onClick={clearFilters}>Clear filters</button></div>}
