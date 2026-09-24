@@ -46,3 +46,12 @@ Not activated yet:
 - no project-wide Auth/OAuth changes
 
 The storefront therefore remains local-first until a scoped server credential can be stored safely in Vercel.
+
+
+## V11 authenticated runtime
+- Browser authentication uses the Project Hub Auth service with the public publishable key only.
+- Veloura never receives the Project Hub service-role key or database password.
+- Signed-in reads/writes are constrained by `auth.uid()` RLS policies in the `veloura` schema.
+- Anonymous database access is limited to sanitized columns of `veloura.product_reviews`.
+- Veloura's custom schema is exposed through PostgREST while preserving the previously active exposed schemas exactly.
+- No project-wide OAuth provider setting was changed.
