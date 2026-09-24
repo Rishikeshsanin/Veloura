@@ -5,6 +5,7 @@ import ProductRail from '../components/ProductRail'
 import StyleThisPiece from '../components/StyleThisPiece'
 import ReviewSummary from '../components/ReviewSummary'
 import VerifiedReviews from '../components/VerifiedReviews'
+import Seo from '../components/Seo'
 import { categoryLabel } from '../data/catalog'
 import { fetchCatalog, fetchCategoryCatalog, fetchProduct } from '../lib/api'
 import { formatINR, getProductPricing } from '../lib/money'
@@ -128,7 +129,28 @@ export default function ProductPage() {
     setTouchStartX(null)
   }
 
+  const productSeo={
+    '@context':'https://schema.org',
+    '@type':'Product',
+    name:product.title,
+    description:product.description,
+    image:Array.from(new Set([...(product.images ?? []),product.thumbnail].filter(Boolean))).slice(0,8),
+    category:categoryLabel(product.category),
+    ...(product.brand?{brand:{'@type':'Brand',name:product.brand}}:{}),
+    ...(product.sku?{sku:product.sku}:{}),
+  }
+  const breadcrumbSeo={
+    '@context':'https://schema.org',
+    '@type':'BreadcrumbList',
+    itemListElement:[
+      {'@type':'ListItem',position:1,name:'Home',item:'https://veloura-nine-theta.vercel.app/'},
+      {'@type':'ListItem',position:2,name:categoryLabel(product.category),item:`https://veloura-nine-theta.vercel.app/shop?category=${encodeURIComponent(product.category)}`},
+      {'@type':'ListItem',position:3,name:product.title},
+    ],
+  }
+
   return <>
+    <Seo title={`${product.title}${product.brand?` by ${product.brand}`:''}`} description={product.description.slice(0,155)} path={`/product/${product.id}?category=${encodeURIComponent(product.category)}`} image={product.thumbnail} jsonLd={[productSeo,breadcrumbSeo]}/>
     <div className="container-wide product-page">
       <div className="breadcrumbs"><Link to="/">Home</Link><span>/</span><Link to={`/shop?category=${product.category}`}>{categoryLabel(product.category)}</Link><span>/</span><span>{product.title}</span></div>
       <div className="product-detail">
