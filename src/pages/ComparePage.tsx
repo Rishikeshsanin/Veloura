@@ -1,4 +1,5 @@
 import { ArrowLeftRight, Heart, ShoppingBag, X } from 'lucide-react'
+import type { CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
 import { categoryLabel } from '../data/catalog'
 import { formatINR, getProductPricing } from '../lib/money'
@@ -26,7 +27,7 @@ export default function ComparePage(){
   return <div className="container-wide compare-page">
     <div className="page-title compare-title"><div><span className="eyebrow">SIDE BY SIDE</span><h1>Compare styles</h1><p>Compare only the product information actually available in the live catalog.</p></div><button className="button ghost" onClick={clearCompare}>Clear all</button></div>
     <div className="compare-scroll">
-      <div className="compare-grid" style={{'--compare-count':compare.length} as React.CSSProperties}>
+      <div className="compare-grid" style={{'--compare-count':compare.length} as CSSProperties}>
         <div className="compare-label-cell compare-product-label">Product</div>
         {compare.map((product)=><article className="compare-product-head" key={product.id}>
           <button aria-label={'Remove '+product.title} onClick={()=>toggleCompare(product)}><X size={15}/></button>
