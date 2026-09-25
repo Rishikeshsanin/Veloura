@@ -83,3 +83,34 @@
   .fit-advisor-grid{grid-template-columns:1fr}
   .fit-advisor-result{grid-template-columns:auto auto}.fit-advisor-result small{grid-column:1/-1}
 }
+
+
+/* Browser alert preferences */
+.notification-prefs .account-panel-title>svg{color:#755b66}
+.notification-prefs>.button{margin-top:14px}
+.notification-pref-list{display:grid;gap:8px;margin-top:16px}
+.notification-pref-list label{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center;padding:13px 14px;border:1px solid #e4dcd6;border-radius:8px;background:#faf7f4;cursor:pointer}
+.notification-pref-list label>span{display:grid;grid-template-columns:20px 1fr;column-gap:8px;align-items:center}
+.notification-pref-list label svg{grid-row:1/3;color:#745b66}
+.notification-pref-list b,.notification-pref-list small{display:block}
+.notification-pref-list b{font-size:9px}
+.notification-pref-list small{font-size:7px;color:#8b8179;margin-top:3px;line-height:1.45}
+.notification-pref-list input{width:36px;height:20px;accent-color:#211c19}
+.notification-permission-note{display:block;margin-top:10px;font-size:7px;color:#8f837b}
+
+/* Verified review media */
+.review-photo-picker{margin-top:12px!important;padding:10px;border:1px dashed #cfc3bb;border-radius:7px;background:#fffdfa;cursor:pointer}
+.review-photo-picker>span{display:flex;align-items:center;gap:6px;font-size:8px;font-weight:900;color:#665b55}
+.review-photo-picker input{display:block;margin-top:8px;font-size:8px;max-width:100%}
+.review-photo-previews,.verified-review-images{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.review-photo-previews>span{position:relative;width:72px;height:88px}
+.review-photo-previews img,.verified-review-images img{width:72px;height:88px;object-fit:cover;border-radius:6px;border:1px solid #e0d7d0;background:#f4f1ee}
+.review-photo-previews button{position:absolute;right:-4px;top:-4px;width:19px;height:19px;border:0;border-radius:50%;background:#211c19;color:#fff;display:grid;place-items:center;cursor:pointer}
+.verified-review-images a{display:block}
+
+/* Keep compare tray from covering footer content on small screens */
+@media(max-width:680px){
+  .notification-pref-list label{padding:11px 12px}
+  .review-photo-previews img,.verified-review-images img{width:64px;height:78px}
+  .review-photo-previews>span{width:64px;height:78px}
+}
