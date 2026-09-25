@@ -4,6 +4,7 @@ import { categoryLabel } from '../data/catalog'
 import { topPreference } from '../lib/personalization'
 import { useAuth } from '../store/AuthContext'
 import { useShop } from '../store/ShopContext'
+import NotificationPreferences from '../components/NotificationPreferences'
 
 const syncCopy = {
   local: ['This device','Sign in to sync across devices.'],
@@ -51,6 +52,8 @@ export default function AccountPage() {
       <div className="account-panel-title"><div><span className="eyebrow">DELIVERY</span><h2>Saved addresses</h2></div><Link to="/checkout">Add at checkout →</Link></div>
       {addresses.length ? <div className="account-addresses">{addresses.map((address)=><article key={address.id} className={address.isDefault?'default':''}><div><strong>{address.label}{address.isDefault?' · Default':''}</strong><span>{address.firstName} {address.lastName}</span><p>{address.line1}{address.line2?', '+address.line2:''}<br/>{address.city}, {address.state} {address.pincode}<br/>{address.phone}</p></div><div>{!address.isDefault&&<button onClick={()=>setDefaultAddress(address.id)}>Make default</button>}<button className="danger" onClick={()=>removeAddress(address.id)}>Remove</button></div></article>)}</div> : <p className="account-muted">No saved address yet. You can save one during checkout.{user?' It will sync with this account.':' Sign in first if you want it across devices.'}</p>}
     </section>
+
+    <NotificationPreferences/>
 
     <section className="account-panel style-account-panel">
       <div className="account-panel-title"><div><span className="eyebrow">PERSONALIZATION</span><h2>Your style signals</h2></div><Sparkles size={22}/></div>
