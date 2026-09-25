@@ -7,6 +7,7 @@ import RouteSeo from './RouteSeo'
 import PageAnalytics from './PageAnalytics'
 import CompareTray from './CompareTray'
 import ClientErrorReporter from './ClientErrorReporter'
+import RecentActivityRail from './RecentActivityRail'
 
 const QuickViewModal = lazy(() => import('./QuickViewModal'))
 const SearchOverlay = lazy(() => import('./SearchOverlay'))
@@ -42,6 +43,7 @@ export default function Layout() {
     {actionToast && <div className="global-commerce-toast" role="status"><span>VELOURA</span><strong>{actionToast}</strong></div>}
 
     <main id="main-content" tabIndex={-1}><div key={`${location.pathname}${location.search}`} className="route-stage"><Outlet /></div></main>
+    <RecentActivityRail/>
 
     <CompareTray/>
 
