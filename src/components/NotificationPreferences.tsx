@@ -1,6 +1,6 @@
 import { Bell, BellOff, TrendingDown } from 'lucide-react'
 import { useState } from 'react'
-import { DEFAULT_ALERT_PREFERENCES, readAlertPreferences, requestBrowserAlerts, writeAlertPreferences, type AlertPreferences } from '../lib/notifications'
+import { readAlertPreferences, requestBrowserAlerts, writeAlertPreferences, type AlertPreferences } from '../lib/notifications'
 
 export default function NotificationPreferences(){
   const [prefs,setPrefs]=useState<AlertPreferences>(readAlertPreferences)
