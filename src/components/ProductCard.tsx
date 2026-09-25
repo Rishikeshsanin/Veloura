@@ -1,4 +1,4 @@
-import { Eye, Heart, ImageOff, Plus, Star } from 'lucide-react'
+import { ArrowLeftRight, Eye, Heart, ImageOff, Plus, Star } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { categoryLabel } from '../data/catalog'
@@ -18,8 +18,9 @@ function normalizeImages(product: Product) {
 }
 
 export default function ProductCard({ product, compact = false }: { product: Product; compact?: boolean }) {
-  const { addToCart, toggleWishlist, isWishlisted, openQuickView } = useShop()
+  const { addToCart, toggleWishlist, isWishlisted, openQuickView, toggleCompare, isCompared } = useShop()
   const wished = isWishlisted(product.id)
+  const compared = isCompared(product.id)
   const { mrp, selling, discount } = getProductPricing(product)
   const imageCandidates = useMemo(() => normalizeImages(product), [product])
   const [imageIndex, setImageIndex] = useState(0)
