@@ -2,10 +2,7 @@ name: Veloura Build Check
 
 on:
   push:
-    branches:
-      - main
-      - v10-real-commerce-foundation
-      - v10-final-qa
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
