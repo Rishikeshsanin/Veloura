@@ -39,6 +39,35 @@ test('mobile dock remains usable on phone viewport', async ({page},testInfo) => 
   await expect(page.locator('.mobile-dock')).toBeVisible()
 })
 
+test('compare tray stays above the mobile bottom dock', async ({page},testInfo) => {
+  test.skip(!testInfo.project.name.includes('mobile'),'mobile-only check')
+  await page.goto('/')
+  await page.evaluate((items)=>localStorage.setItem('veloura_compare_v1',JSON.stringify(items)),mockCompare)
+  await page.reload()
+  const tray=page.locator('.compare-tray')
+  const dock=page.locator('.mobile-dock')
+  await expect(tray).toBeVisible()
+  await expect(dock).toBeVisible()
+  const trayBox=await tray.boundingBox()
+  const dockBox=await dock.boundingBox()
+  expect(trayBox).not.toBeNull()
+  expect(dockBox).not.toBeNull()
+  expect(trayBox!.y + trayBox!.height).toBeLessThanOrEqual(dockBox!.y + 2)
+})
+
+test('mobile core pages do not create document-level horizontal overflow', async ({page},testInfo) => {
+  test.skip(!testInfo.project.name.includes('mobile'),'mobile-only check')
+  for (const route of ['/', '/shop?category=womens-dresses', '/compare']) {
+    if(route==='/compare') {
+      await page.goto('/')
+      await page.evaluate((items)=>localStorage.setItem('veloura_compare_v1',JSON.stringify(items)),mockCompare)
+    }
+    await page.goto(route)
+    const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth)
+    expect(overflow, `horizontal overflow on ${route}`).toBeLessThanOrEqual(2)
+  }
+})
+
 for (const route of ['/', '/login']) {
   test(`no critical accessibility violations on ${route}`, async ({page}) => {
     await page.goto(route)

@@ -46,8 +46,10 @@ Vercel runtime errors remain the production backend/serverless signal.
 Automated browser coverage uses:
 - Desktop Chromium
 - Pixel 7 mobile emulation in Chromium
+- Desktop Firefox
+- iPhone 13 mobile emulation in WebKit
 
-This is strong automated responsive coverage, but it is not a substitute for physical-device QA. Physical iOS/Safari and Android device checks remain a manual release sanity check when a real-device lab is available.
+The cross-browser matrix catches layout and interaction regressions across Chromium, Firefox and WebKit engines. Emulation is still not a substitute for physical-device QA, so physical iOS/Safari and Android checks remain a manual release sanity check when a real-device lab is available.
 
 ## Current commerce boundary
 
