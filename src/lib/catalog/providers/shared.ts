@@ -2,6 +2,28 @@ import type { Product } from '../../../types'
 
 export const API_TIMEOUT = 8500
 
+export async function runWithConcurrency<T>(tasks: Array<() => Promise<T>>, limit = 6): Promise<PromiseSettledResult<T>[]> {
+  if (!tasks.length) return []
+  const results: PromiseSettledResult<T>[] = new Array(tasks.length)
+  let cursor = 0
+
+  const worker = async () => {
+    while (true) {
+      const index = cursor
+      cursor += 1
+      if (index >= tasks.length) return
+      try {
+        results[index] = { status: 'fulfilled', value: await tasks[index]() }
+      } catch (reason) {
+        results[index] = { status: 'rejected', reason }
+      }
+    }
+  }
+
+  await Promise.all(Array.from({ length: Math.min(Math.max(1, limit), tasks.length) }, () => worker()))
+  return results
+}
+
 export type ManagedProvider = {
   id: string
   label: string
