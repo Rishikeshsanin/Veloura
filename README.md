@@ -105,3 +105,26 @@ The final storefront hardening pass adds:
 - verified-purchase review eligibility that cannot be forged by creating a fake delivered order in the browser
 
 Payment and physical fulfilment remain intentionally sandboxed. Real card/UPI credentials are never stored by Veloura.
+
+
+## V13 advanced UX and engineering polish
+
+Phase 5 and Phase 6 are implemented without activating real payment or fulfilment:
+
+- side-by-side comparison for up to four products
+- recently viewed discovery across shopping routes
+- fit advisor inside the size guide
+- transparent sandbox pincode delivery windows
+- factual product Q&A
+- wishlist price-drop/back-in-stock detection
+- opt-in browser notifications for real wishlist changes
+- optional photos on verified buyer reviews using a Veloura-only storage bucket
+- bounded provider concurrency for deeper catalog expansion
+- signed-in frontend error telemetry
+- Playwright desktop/mobile E2E tests
+- axe critical-accessibility checks
+- Lighthouse CI reports
+- critical npm audit
+- weekly CodeQL and Dependabot monitoring
+
+See `docs/QUALITY.md` for the permanent release gates and limitations.
