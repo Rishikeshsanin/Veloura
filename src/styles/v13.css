@@ -32,7 +32,6 @@
 .compare-scroll{overflow:auto;padding-bottom:10px}
 .compare-grid{--compare-count:2;display:grid;grid-template-columns:150px repeat(var(--compare-count),minmax(220px,1fr));min-width:calc(150px + var(--compare-count)*220px);border:1px solid #e5ddd7;border-radius:10px;overflow:hidden;background:#fffdfa}
 .compare-grid>*{border-right:1px solid #eee7e2;border-bottom:1px solid #eee7e2}
-.compare-grid>*:nth-child(calc(var(--compare-count) + 1)n){border-right:0}
 .compare-label-cell{padding:14px 12px;background:#faf7f4;font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.05em;color:#766c65}
 .compare-product-label{min-height:330px;display:flex;align-items:flex-end}
 .compare-product-head{position:relative;padding:12px;min-width:0}
