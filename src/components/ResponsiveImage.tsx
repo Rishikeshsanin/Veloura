@@ -1,6 +1,6 @@
 import type { ImgHTMLAttributes } from 'react'
 
-const DEFAULT_WIDTHS = [240, 320, 480, 640, 768, 960, 1200, 1600]
+const DEFAULT_WIDTHS = [160, 240, 320, 480, 640, 768, 960, 1200, 1600]
 
 function unsplashVariant(src: string, width: number) {
   try {

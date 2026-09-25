@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, type ComponentProps } from 'react'
 import ProductRail from './ProductRail'
+import ProductSkeleton from './ProductSkeleton'
 
 export default function DeferredProductRail(props: ComponentProps<typeof ProductRail>) {
-  const marker = useRef<HTMLDivElement>(null)
+  const marker = useRef<HTMLElement>(null)
   const [ready, setReady] = useState(() => typeof window === 'undefined' || !('IntersectionObserver' in window))
 
   useEffect(() => {
@@ -17,5 +18,13 @@ export default function DeferredProductRail(props: ComponentProps<typeof Product
   }, [ready])
 
   if (ready) return <ProductRail {...props} />
-  return <div ref={marker} aria-hidden="true" style={{ minHeight: 380 }} />
+
+  return <section ref={marker} className="rail-section container" aria-hidden="true">
+    <div className="section-heading marketplace-heading" style={{ visibility: 'hidden' }}>
+      <div>{props.eyebrow && <span className="eyebrow">{props.eyebrow}</span>}<h2>{props.title}</h2>{props.subtitle && <p>{props.subtitle}</p>}</div>
+    </div>
+    <div className={`product-rail ${props.compact ? 'compact' : ''}`}>
+      {Array.from({ length: 6 }).map((_, index) => <ProductSkeleton key={index} compact={props.compact} />)}
+    </div>
+  </section>
 }
