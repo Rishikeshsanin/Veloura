@@ -9,6 +9,7 @@ export default class ErrorBoundary extends Component<{children:ReactNode},{hasEr
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error('[Veloura UI]', error, info)
+    window.dispatchEvent(new CustomEvent('veloura-ui-error',{detail:{message:error.message}}))
   }
 
   render() {
