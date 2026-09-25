@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, type ComponentProps } from 'react'
 import ProductRail from './ProductRail'
-import ProductSkeleton from './ProductSkeleton'
 
 export default function DeferredProductRail(props: ComponentProps<typeof ProductRail>) {
   const marker = useRef<HTMLElement>(null)
@@ -23,8 +22,6 @@ export default function DeferredProductRail(props: ComponentProps<typeof Product
     <div className="section-heading marketplace-heading" style={{ visibility: 'hidden' }}>
       <div>{props.eyebrow && <span className="eyebrow">{props.eyebrow}</span>}<h2>{props.title}</h2>{props.subtitle && <p>{props.subtitle}</p>}</div>
     </div>
-    <div className={`product-rail ${props.compact ? 'compact' : ''}`}>
-      {Array.from({ length: 6 }).map((_, index) => <ProductSkeleton key={index} compact={props.compact} />)}
-    </div>
+    <div style={{ height: props.compact ? 340 : 380 }} />
   </section>
 }
