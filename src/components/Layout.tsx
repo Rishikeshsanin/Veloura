@@ -5,6 +5,9 @@ import { HEADER_NAV, WOMEN_CATEGORIES } from '../data/catalog'
 import { useShop } from '../store/ShopContext'
 import RouteSeo from './RouteSeo'
 import PageAnalytics from './PageAnalytics'
+import CompareTray from './CompareTray'
+import ClientErrorReporter from './ClientErrorReporter'
+import RecentActivityRail from './RecentActivityRail'
 
 const QuickViewModal = lazy(() => import('./QuickViewModal'))
 const SearchOverlay = lazy(() => import('./SearchOverlay'))
@@ -28,7 +31,7 @@ export default function Layout() {
     setSearchOpen(false)
   }, [location.pathname])
 
-  return <div className="app-shell"><RouteSeo/><PageAnalytics/><a className="skip-link" href="#main-content">Skip to content</a>
+  return <div className="app-shell"><RouteSeo/><PageAnalytics/><ClientErrorReporter/><a className="skip-link" href="#main-content">Skip to content</a>
     <div className="offer-ribbon"><span>WOMEN'S FASHION ONLY</span><strong>EXTRA 10% OFF ON YOUR FIRST ORDER · CODE: HELLOVELOURA</strong><span>FREE SHIPPING ABOVE ₹1,499</span></div>
     <div className="utility-bar container-wide"><span>India</span><div><Link to="/help/faq"><HelpCircle size={13} /> Help</Link><Link to="/track-order"><Truck size={13} /> Track order</Link></div></div>
     <header className="site-header"><div className="header-inner container-wide"><button className="icon-button mobile-only" aria-label="Open menu" onClick={() => setMenuOpen(true)}><Menu size={23} /></button><Link className="brand" to="/">VELOURA<span>WOMEN</span></Link><button className="desktop-search search-launch" type="button" onClick={() => setSearchOpen(true)}><Search size={19} /><span>Search women’s fashion, beauty, bags and more</span><b>Search</b></button><div className="header-actions"><button className="icon-button mobile-only" aria-label="Search" onClick={() => setSearchOpen(true)}><Search size={21} /></button><Link className="header-action hide-small" aria-label="Account" to="/account"><UserRound size={20} /><span>Profile</span></Link><Link className="header-action badge-wrap" aria-label="Wishlist" to="/wishlist"><Heart size={20} /><span className="hide-label-mobile">Wishlist</span>{wishlist.length > 0 && <span className="badge">{wishlist.length}</span>}</Link><Link className="header-action badge-wrap" aria-label="Cart" to="/cart"><ShoppingBag size={20} /><span className="hide-label-mobile">Bag</span>{cartCount > 0 && <span className="badge">{cartCount}</span>}</Link></div></div></header>
@@ -40,6 +43,9 @@ export default function Layout() {
     {actionToast && <div className="global-commerce-toast" role="status"><span>VELOURA</span><strong>{actionToast}</strong></div>}
 
     <main id="main-content" tabIndex={-1}><div key={`${location.pathname}${location.search}`} className="route-stage"><Outlet /></div></main>
+    <RecentActivityRail/>
+
+    <CompareTray/>
 
     <nav className="mobile-dock" aria-label="Mobile navigation"><NavLink to="/" end><Home size={20}/><span>Home</span></NavLink><button type="button" onClick={() => setSearchOpen(true)}><Search size={20}/><span>Search</span></button><NavLink to="/wishlist" className="badge-wrap"><Heart size={20}/><span>Wishlist</span>{wishlist.length > 0 && <b>{wishlist.length}</b>}</NavLink><NavLink to="/cart" className="badge-wrap"><ShoppingBag size={20}/><span>Bag</span>{cartCount > 0 && <b>{cartCount}</b>}</NavLink><NavLink to="/account"><UserRound size={20}/><span>Profile</span></NavLink></nav>
 

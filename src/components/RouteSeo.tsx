@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom'
 import { categoryLabel } from '../data/catalog'
 import Seo from './Seo'
 
-const PRIVATE_PREFIXES=['/account','/login','/wishlist','/cart','/checkout','/orders','/order/','/track-order','/catalog-control']
+const PRIVATE_PREFIXES=['/account','/login','/wishlist','/compare','/cart','/checkout','/orders','/order/','/track-order','/catalog-control']
 
 export default function RouteSeo(){
   const location=useLocation()
@@ -51,7 +51,7 @@ export default function RouteSeo(){
     title=`Veloura ${slug.replace(/\b\w/g,(char)=>char.toUpperCase())}`
     description=`Veloura information about ${slug}, shopping support and storefront policies.`
   } else if(noindex){
-    title=pathname==='/account'?'My Veloura':pathname==='/wishlist'?'Wishlist':pathname==='/cart'?'Shopping Bag':pathname==='/checkout'?'Checkout':pathname==='/login'?'Sign In':'My Veloura'
+    title=pathname==='/account'?'My Veloura':pathname==='/wishlist'?'Wishlist':pathname==='/compare'?'Compare Products':pathname==='/cart'?'Shopping Bag':pathname==='/checkout'?'Checkout':pathname==='/login'?'Sign In':'My Veloura'
   } else if(pathname!=='/'){
     title='Veloura Women'
   }

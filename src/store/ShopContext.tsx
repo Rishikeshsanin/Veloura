@@ -21,6 +21,7 @@ type NewAddress = Omit<Address, 'id' | 'createdAt' | 'isDefault'> & { isDefault?
 type ShopState = {
   cart: CartItem[]
   wishlist: Product[]
+  compare: Product[]
   recentlyViewed: Product[]
   savedForLater: CartItem[]
   addresses: Address[]
@@ -33,6 +34,9 @@ type ShopState = {
   removeFromCart: (productId: number, size?: string) => void
   updateQuantity: (productId: number, size: string, quantity: number) => void
   toggleWishlist: (product: Product) => void
+  toggleCompare: (product: Product) => void
+  isCompared: (productId: number) => boolean
+  clearCompare: () => void
   isWishlisted: (productId: number) => boolean
   recordRecentlyViewed: (product: Product) => void
   openQuickView: (product: Product) => void
@@ -70,6 +74,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const { user, loading: authLoading } = useAuth()
   const [cart, setCart] = useState<CartItem[]>(() => read('veloura_cart', []))
   const [wishlist, setWishlist] = useState<Product[]>(() => read('veloura_wishlist', []))
+  const [compare, setCompare] = useState<Product[]>(() => read('veloura_compare_v1', []))
   const [recentlyViewed, setRecentlyViewed] = useState<Product[]>(() => read('veloura_recent', []))
   const [savedForLater, setSavedForLater] = useState<CartItem[]>(() => read('veloura_saved_for_later_v1', []))
   const [addresses, setAddresses] = useState<Address[]>(() => read('veloura_addresses_v1', []))
@@ -85,6 +90,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => localStorage.setItem('veloura_cart', JSON.stringify(cart)), [cart])
   useEffect(() => localStorage.setItem('veloura_wishlist', JSON.stringify(wishlist)), [wishlist])
+  useEffect(() => localStorage.setItem('veloura_compare_v1', JSON.stringify(compare)), [compare])
   useEffect(() => localStorage.setItem('veloura_recent', JSON.stringify(recentlyViewed)), [recentlyViewed])
   useEffect(() => localStorage.setItem('veloura_preferences_v1', JSON.stringify(preferenceSignals)), [preferenceSignals])
   useEffect(() => localStorage.setItem('veloura_saved_for_later_v1', JSON.stringify(savedForLater)), [savedForLater])
@@ -195,6 +201,27 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     if (user) recordCommerceEvent(user.id, 'wishlist_add', { productId: product.id }).catch(() => undefined)
     return [...items, product]
   }), [recordSignal, user])
+
+  const toggleCompare = useCallback((product: Product) => {
+    setCompare((items) => {
+      const exists = items.some((item) => item.id === product.id)
+      if (exists) {
+        setActionToast('Removed from compare')
+        return items.filter((item) => item.id !== product.id)
+      }
+      if (items.length >= 4) {
+        setActionToast('Compare up to 4 products at a time')
+        return items
+      }
+      setActionToast(`${product.title} added to compare`)
+      return [...items, product]
+    })
+  }, [])
+
+  const clearCompare = useCallback(() => {
+    setCompare([])
+    setActionToast('Compare list cleared')
+  }, [])
 
   const recordRecentlyViewed = useCallback((product: Product) => setRecentlyViewed((items) => {
     const next = [product, ...items.filter((item) => item.id !== product.id)].slice(0, 18)
@@ -340,14 +367,15 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   }, [user?.id, cart, savedForLater, wishlist, addresses, orders, recentlyViewed, preferenceSignals, syncNow])
 
   const value = useMemo(() => ({
-    cart, wishlist, recentlyViewed, savedForLater, addresses, orders, quickViewProduct, preferenceSignals, actionToast, coupon,
-    addToCart, removeFromCart, updateQuantity, toggleWishlist, recordRecentlyViewed: recordRecentlyViewedWithSignal, openQuickView, closeQuickView,
+    cart, wishlist, compare, recentlyViewed, savedForLater, addresses, orders, quickViewProduct, preferenceSignals, actionToast, coupon,
+    addToCart, removeFromCart, updateQuantity, toggleWishlist, toggleCompare, clearCompare, recordRecentlyViewed: recordRecentlyViewedWithSignal, openQuickView, closeQuickView,
     isWishlisted: (productId: number) => wishlist.some((p) => p.id === productId),
+    isCompared: (productId: number) => compare.some((p) => p.id === productId),
     cartCount: cart.reduce((sum, item) => sum + item.quantity, 0),
     subtotal,
     clearCart, resetPreferences, saveForLater, moveSavedToCart, removeSaved,
     addAddress, removeAddress, setDefaultAddress, applyCoupon, removeCoupon, placeOrder, cancelOrder, cloudStatus, syncNow,
-  }), [cart, wishlist, recentlyViewed, savedForLater, addresses, orders, quickViewProduct, preferenceSignals, actionToast, coupon, subtotal, addToCart, removeFromCart, updateQuantity, toggleWishlist, recordRecentlyViewedWithSignal, openQuickView, closeQuickView, clearCart, resetPreferences, saveForLater, moveSavedToCart, removeSaved, addAddress, removeAddress, setDefaultAddress, applyCoupon, removeCoupon, placeOrder, cancelOrder, cloudStatus, syncNow])
+  }), [cart, wishlist, compare, recentlyViewed, savedForLater, addresses, orders, quickViewProduct, preferenceSignals, actionToast, coupon, subtotal, addToCart, removeFromCart, updateQuantity, toggleWishlist, toggleCompare, clearCompare, recordRecentlyViewedWithSignal, openQuickView, closeQuickView, clearCart, resetPreferences, saveForLater, moveSavedToCart, removeSaved, addAddress, removeAddress, setDefaultAddress, applyCoupon, removeCoupon, placeOrder, cancelOrder, cloudStatus, syncNow])
 
   return <ShopContext.Provider value={value}>{children}</ShopContext.Provider>
 }

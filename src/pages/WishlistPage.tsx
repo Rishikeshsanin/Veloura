@@ -5,6 +5,7 @@ import ProductCard from '../components/ProductCard'
 import { fetchCategoryCatalog, fetchProduct } from '../lib/api'
 import { defaultProductSize } from '../lib/sizing'
 import { getProductPricing } from '../lib/money'
+import { browserAlert, markAlertOnce, readAlertPreferences } from '../lib/notifications'
 import { useShop } from '../store/ShopContext'
 import type { Product } from '../types'
 
@@ -37,7 +38,20 @@ export default function WishlistPage() {
     if(!wishlist.length){setLive(new Map());return}
     setRefreshing(true)
     const rows=await Promise.all(wishlist.map(async(saved)=>[saved.id,await refreshProduct(saved)] as const))
-    setLive(new Map(rows))
+    const next=new Map(rows)
+    setLive(next)
+    const prefs=readAlertPreferences()
+    wishlist.forEach((saved)=>{
+      const current=next.get(saved.id) ?? saved
+      const savedPrice=getProductPricing(saved).selling
+      const currentPrice=getProductPricing(current).selling
+      if(prefs.priceDrops && currentPrice<savedPrice && markAlertOnce(`price:${saved.id}:${currentPrice}`)){
+        browserAlert('Veloura price drop',`${saved.title} is now ₹${currentPrice.toLocaleString('en-IN')}.`,`veloura-price-${saved.id}`)
+      }
+      if(prefs.backInStock && saved.stock===0 && current.stock!==0 && markAlertOnce(`stock:${saved.id}`)){
+        browserAlert('Back in stock at Veloura',`${saved.title} is available again.`,`veloura-stock-${saved.id}`)
+      }
+    })
     setRefreshing(false)
   }
 
