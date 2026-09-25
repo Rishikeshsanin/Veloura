@@ -5,6 +5,7 @@ import { formatINR, getProductPricing } from '../lib/money'
 import { defaultProductSize } from '../lib/sizing'
 import { useShop } from '../store/ShopContext'
 import type { Product } from '../types'
+import ResponsiveImage from './ResponsiveImage'
 
 type LookConfig = { name: string; note: string; categories: string[]; href: string }
 type BuiltLook = LookConfig & { products: Product[] }
@@ -44,7 +45,7 @@ export default function ShopTheLook({ products }: { products: Product[] }) {
     <div className="look-stage" key={active.name}>
       <div className="look-visuals">
         {active.products.map((product,index) => <Link className={`look-visual look-visual-${index}`} key={product.id} to={`/product/${product.id}?category=${encodeURIComponent(product.category)}`}>
-          <img src={product.images?.[0] || product.thumbnail} alt={product.title} loading="lazy"/>
+          <ResponsiveImage src={product.images?.[0] || product.thumbnail} sizes="(max-width: 760px) 72vw, 24vw" alt={product.title} loading="lazy" decoding="async"/>
           <span>{index + 1}</span>
         </Link>)}
         <div className="look-monogram" aria-hidden="true">V</div>

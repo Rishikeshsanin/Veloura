@@ -13,11 +13,15 @@ const CATEGORY_LIMIT = 240
 const CATEGORY_CACHE_TTL = 30 * 60 * 1000
 
 const allProviders: ManagedProvider[] = [...externalCatalogProviders,...catalogProviders].sort((a,b)=>b.priority-a.priority)
+const HOME_PROVIDER_IDS = new Set(['vaanzari','dummy-departments','dummyjson'])
+const homeProviders = allProviders.filter((provider)=>HOME_PROVIDER_IDS.has(provider.id))
 
 export type ProviderHealth = { id:string; label:string; status:'ready'|'failed'|'cached'; count:number; durationMs:number; message?:string }
 
 let catalogCache:Product[]|null=null
 let pendingCatalog:Promise<Product[]>|null=null
+let homeCatalogCache:Product[]|null=null
+let pendingHomeCatalog:Promise<Product[]>|null=null
 let providerHealth:ProviderHealth[]=[]
 const categoryCache=new Map<string,{expires:number;products:Product[]}>()
 
@@ -78,6 +82,10 @@ function readSessionCache() {
 }
 function writeSessionCache(products:Product[]) { try { sessionStorage.setItem(CACHE_KEY,JSON.stringify({expires:Date.now()+CACHE_TTL,products})) } catch { /* in-memory cache still works */ } }
 
+async function loadProviderQuiet(provider:ManagedProvider) {
+  try { return await provider.load() } catch { return [] }
+}
+
 async function loadProvider(provider:ManagedProvider) {
   const started=performance.now()
   try {
@@ -107,6 +115,22 @@ export async function fetchManagedCatalog(forceRefresh=false):Promise<Product[]>
   try { return await pendingCatalog } finally { pendingCatalog=null }
 }
 
+export async function fetchManagedHomeCatalog():Promise<Product[]> {
+  if (catalogCache) return catalogCache
+  const sessionCached=readSessionCache()
+  if (sessionCached?.length) { catalogCache=sessionCached; return sessionCached }
+  if (homeCatalogCache) return homeCatalogCache
+  if (pendingHomeCatalog) return pendingHomeCatalog
+
+  pendingHomeCatalog=(async()=>{
+    const providerResults=await Promise.all(homeProviders.map(loadProviderQuiet))
+    const catalog=dedupeAndBalance([...providerResults.flat(),...fallbackProducts])
+    homeCatalogCache=catalog
+    return catalog
+  })()
+  try { return await pendingHomeCatalog } finally { pendingHomeCatalog=null }
+}
+
 export async function fetchManagedCategory(category:string) {
   const base=await fetchManagedCatalog()
   if (!ALLOWED_CATEGORIES.has(category)) return base
@@ -128,4 +152,4 @@ export async function searchManagedCatalog(query:string) {
 }
 
 export function getCatalogDiagnostics(){ return providerHealth.map((entry)=>({...entry})) }
-export function clearCatalogCache(){ catalogCache=null; categoryCache.clear(); clearCategoryExpansionCache(); try { sessionStorage.removeItem(CACHE_KEY) } catch { /* noop */ } }
+export function clearCatalogCache(){ catalogCache=null; homeCatalogCache=null; categoryCache.clear(); clearCategoryExpansionCache(); try { sessionStorage.removeItem(CACHE_KEY) } catch { /* noop */ } }
