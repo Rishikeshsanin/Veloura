@@ -68,3 +68,20 @@ Before adding Veloura, PostgREST reported 35 cached relations. The existing clie
 The manual PostgREST schema list therefore preserves:
 `public, graphql_public, ai_research_os, closeby, commercialiq, koshora`
 and adds only `veloura`.
+
+
+## V12 integrity boundary
+
+Veloura no longer grants authenticated browser clients direct order/order-item INSERT privileges.
+
+`veloura.create_order_snapshot(...)` creates the order and its item snapshots atomically under the current `auth.uid()`, forces status=`placed` and payment_status=`sandbox`, validates totals, and rejects anonymous callers.
+
+After creation:
+- authenticated users may read only their own order rows/items through RLS
+- authenticated users can update only `status` and `updated_at` on their own cancellable order
+- RLS permits the client transition only to `cancelled`
+- browser clients cannot alter total, address, product snapshots or add order items later
+
+Review identity/order linkage columns are not granted for general authenticated reads. The authenticated-only `review_eligibility(product_id)` RPC returns an eligible delivered order item for the current user. Review INSERT is still independently protected by RLS.
+
+Supabase Security Advisor was re-run after this migration and reported no findings belonging to the `veloura` schema.
