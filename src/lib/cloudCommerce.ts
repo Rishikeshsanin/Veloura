@@ -2,6 +2,7 @@ import type { CartItem, Product } from '../types'
 import type { PreferenceSignals } from './personalization'
 import type { Address, Order, OrderStatus, PaymentMethod } from './commerce'
 import { velouraDb } from './supabase'
+import { getProductPricing } from './money'
 
 export type CloudCommerceState = {
   cart: CartItem[]
@@ -253,40 +254,41 @@ export async function pushCloudCommerce(
       continue
     }
 
-    const orderR = await db.from('orders').insert({
-      order_number: order.id,
-      user_id: userId,
-      guest_key_hash: null,
-      status: order.status,
-      payment_method: order.paymentMethod,
-      payment_status: 'sandbox',
-      subtotal: Math.round(order.subtotal),
-      discount: Math.round(order.discount),
-      delivery: Math.round(order.delivery),
-      total: Math.round(order.total),
-      coupon_code: order.couponCode ?? null,
-      delivery_address: order.address,
-      contact_email: order.address.email,
-      contact_phone: order.address.phone,
-      created_at: order.createdAt,
-      updated_at: now,
-    }).select('id').single()
+    const items = order.items.map((item) => ({
+      product_id: item.product.id,
+      source_id: item.product.sourceId ?? null,
+      title: item.product.title,
+      brand: item.product.brand ?? null,
+      category: item.product.category,
+      size: item.size,
+      quantity: item.quantity,
+      unit_price: Math.round(getProductPricing(item.product).selling),
+      product_snapshot: item.product,
+    }))
+
+    const orderR = await db.rpc('create_order_snapshot', {
+      p_order_number: order.id,
+      p_payment_method: order.paymentMethod,
+      p_subtotal: Math.round(order.subtotal),
+      p_discount: Math.round(order.discount),
+      p_delivery: Math.round(order.delivery),
+      p_total: Math.round(order.total),
+      p_coupon_code: order.couponCode ?? null,
+      p_delivery_address: order.address,
+      p_contact_email: order.address.email,
+      p_contact_phone: order.address.phone,
+      p_created_at: order.createdAt,
+      p_items: items,
+    })
     if (orderR.error) throw orderR.error
 
-    if (order.items.length) {
-      const itemsR = await db.from('order_items').insert(order.items.map((item) => ({
-        order_id: orderR.data.id,
-        product_id: item.product.id,
-        source_id: item.product.sourceId ?? null,
-        title: item.product.title,
-        brand: item.product.brand ?? null,
-        category: item.product.category,
-        size: item.size,
-        quantity: item.quantity,
-        unit_price: Math.round(item.product.price),
-        product_snapshot: item.product,
-      })))
-      if (itemsR.error) throw itemsR.error
+    if (order.status === 'cancelled') {
+      const createdR = await db.from('orders').select('id').eq('user_id', userId).eq('order_number', order.id).maybeSingle()
+      if (createdR.error) throw createdR.error
+      if (createdR.data?.id) {
+        const cancelR = await db.from('orders').update({ status: 'cancelled', updated_at: now }).eq('id', createdR.data.id).eq('user_id', userId)
+        if (cancelR.error) throw cancelR.error
+      }
     }
   }
 }
