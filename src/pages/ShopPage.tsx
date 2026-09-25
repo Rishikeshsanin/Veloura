@@ -7,6 +7,7 @@ import { WOMEN_CATEGORIES, categoryLabel } from '../data/catalog'
 import { fetchCatalog, fetchCategoryCatalog, searchProducts } from '../lib/api'
 import { getProductPricing } from '../lib/money'
 import { colorSwatch, productMerchandisingScore } from '../lib/productIntelligence'
+import { expandSearchQueries, normalizeSearch } from '../lib/searchIntelligence'
 import type { Product } from '../types'
 
 const PAGE_SIZE = 36
@@ -48,6 +49,7 @@ export default function ShopPage() {
   const occasion = params.get('occasion') || ''
   const inStock = params.get('stock') === '1'
   const categoryEdits = CATEGORY_EDITS[category] ?? []
+  const searchRecovery = useMemo(() => query ? expandSearchQueries(query).filter((value)=>normalizeSearch(value)!==normalizeSearch(query)).slice(0,3) : [], [query])
 
   useEffect(() => {
     let cancelled = false
@@ -200,7 +202,7 @@ export default function ShopPage() {
       {sortOpen && <div className="sort-sheet-backdrop mobile-only" onClick={() => setSortOpen(false)}><section className="sort-sheet" onClick={(event) => event.stopPropagation()}><div className="sort-sheet-head"><div><span className="eyebrow">ORDER THE EDIT</span><strong>Sort products</strong></div><button className="icon-button" onClick={() => setSortOpen(false)}><X/></button></div>{[['featured','Recommended'],['new','What’s new'],['rating','Customer rating'],['discount','Better discount'],['price-low','Price: low to high'],['price-high','Price: high to low']].map(([value,label]) => <button key={value} className={sort===value?'active':''} onClick={() => { update('sort',value); setSortOpen(false) }}><span>{label}</span>{sort===value && <b>Selected</b>}</button>)}</section></div>}
       <section className="catalog-column" aria-busy={loading || expanding}>
         <div className="product-grid shop-grid catalog-grid-stage">{loading ? Array.from({length: 18}).map((_,i) => <ProductSkeleton key={i}/>) : visible.slice(0,shown).map((p) => <ProductCard key={p.id} product={p}/>)}</div>
-        {!loading && visible.length === 0 && <div className="empty-state"><span className="empty-mark">V</span><h2>No styles matched</h2><p>Try clearing one filter or exploring another Veloura department.</p><button className="button outline" onClick={clearFilters}>Clear filters</button></div>}
+        {!loading && visible.length === 0 && <div className="empty-state"><span className="empty-mark">V</span><h2>No styles matched</h2><p>{query ? 'Try a related search or clear the active filters.' : 'Try clearing one filter or exploring another Veloura department.'}</p>{searchRecovery.length>0&&<div className="search-recovery-links">{searchRecovery.map((value)=><Link key={value} to={`/shop?q=${encodeURIComponent(value)}`}>{value}</Link>)}</div>}<button className="button outline" onClick={clearFilters}>Clear filters</button></div>}
         {shown < visible.length && <div className="load-more"><div className="load-more-meta"><span>Showing {shownCount.toLocaleString('en-IN')} of {visible.length.toLocaleString('en-IN')} styles</span><b>{completion}% explored</b></div><div className="load-more-track"><i style={{ width: `${completion}%` }} /></div><button className="button outline load-more-button" onClick={() => setShown((n) => n + PAGE_SIZE)}>View {Math.min(PAGE_SIZE, visible.length - shown).toLocaleString('en-IN')} more</button></div>}
       </section>
     </div>

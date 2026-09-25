@@ -30,23 +30,13 @@ export async function fetchVelouraReviews(productId: number): Promise<VelouraRev
   }))
 }
 
-export async function findReviewEligibility(userId: string, productId: number): Promise<ReviewEligibility | null> {
-  const db = velouraDb()
-  const ordersR = await db.from('orders').select('id').eq('user_id', userId).eq('status', 'delivered')
-  if (ordersR.error) throw ordersR.error
-  const orderIds = (ordersR.data ?? []).map((row:any) => row.id)
-  if (!orderIds.length) return null
-
-  const itemsR = await db.from('order_items').select('id,order_id').eq('product_id', productId).in('order_id', orderIds)
-  if (itemsR.error) throw itemsR.error
-  const items = itemsR.data ?? []
-  if (!items.length) return null
-
-  const reviewsR = await db.from('product_reviews').select('order_item_id').eq('user_id', userId).eq('product_id', productId)
-  if (reviewsR.error) throw reviewsR.error
-  const reviewed = new Set((reviewsR.data ?? []).map((row:any) => row.order_item_id))
-  const eligible:any = items.find((row:any) => !reviewed.has(row.id))
-  return eligible ? { orderId: eligible.order_id, orderItemId: eligible.id } : null
+export async function findReviewEligibility(_userId: string, productId: number): Promise<ReviewEligibility | null> {
+  const { data, error } = await velouraDb().rpc('review_eligibility', { p_product_id: productId })
+  if (error) throw error
+  const row = Array.isArray(data) ? data[0] : null
+  return row?.order_id && row?.order_item_id
+    ? { orderId: String(row.order_id), orderItemId: String(row.order_item_id) }
+    : null
 }
 
 export async function submitVelouraReview(
