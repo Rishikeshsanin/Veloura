@@ -10,6 +10,7 @@ import {
   stableHash,
   stableNumericId,
   uniqueExternalImages,
+  runWithConcurrency,
 } from './providers/shared'
 
 type LooseObject = Record<string, unknown>
@@ -84,10 +85,14 @@ function normalizeSoleScout(item: LooseObject, category: string): Product | null
 }
 
 async function loadSoleScoutBatch(terms:string[], pages:number[], category:string) {
-  const settled = await Promise.allSettled(terms.flatMap((term) => pages.map(async (page) => {
-    const payload = await fetchProviderJson<SoleScoutPayload>(`/catalog-source/solescout?q=${encodeURIComponent(term)}&page=${page}&limit=25`)
-    return (payload.results ?? []).map((item) => normalizeSoleScout(item,category)).filter((item): item is Product => Boolean(item))
-  })))
+  const tasks = terms.flatMap((term) => pages.map(() => term)).map((term,index) => {
+    const page = pages[index % pages.length]
+    return async () => {
+      const payload = await fetchProviderJson<SoleScoutPayload>(`/catalog-source/solescout?q=${encodeURIComponent(term)}&page=${page}&limit=25`)
+      return (payload.results ?? []).map((item) => normalizeSoleScout(item,category)).filter((item): item is Product => Boolean(item))
+    }
+  })
+  const settled = await runWithConcurrency(tasks,6)
   return settled.flatMap((result) => result.status === 'fulfilled' ? result.value : [])
 }
 
@@ -113,10 +118,14 @@ function normalizeBeauty(item: BeautyProduct, category:string): Product | null {
 
 async function loadBeautyBatch(terms:string[], pages:number[], category:string) {
   const fields='code,product_name,brands,categories,quantity,image_url,image_front_url,image_ingredients_url,image_packaging_url'
-  const settled = await Promise.allSettled(terms.flatMap((term) => pages.map(async (page) => {
-    const payload = await fetchProviderJson<BeautyPayload>(`/catalog-source/openbeauty?categories_tags_en=${encodeURIComponent(term)}&page=${page}&page_size=80&fields=${fields}`)
-    return (payload.products ?? []).map((item) => normalizeBeauty(item,category)).filter((item): item is Product => Boolean(item))
-  })))
+  const tasks = terms.flatMap((term) => pages.map(() => term)).map((term,index) => {
+    const page = pages[index % pages.length]
+    return async () => {
+      const payload = await fetchProviderJson<BeautyPayload>(`/catalog-source/openbeauty?categories_tags_en=${encodeURIComponent(term)}&page=${page}&page_size=80&fields=${fields}`)
+      return (payload.products ?? []).map((item) => normalizeBeauty(item,category)).filter((item): item is Product => Boolean(item))
+    }
+  })
+  const settled = await runWithConcurrency(tasks,6)
   return settled.flatMap((result) => result.status === 'fulfilled' ? result.value : [])
 }
 
