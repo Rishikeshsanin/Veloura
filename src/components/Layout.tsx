@@ -5,6 +5,7 @@ import { HEADER_NAV, WOMEN_CATEGORIES } from '../data/catalog'
 import { useShop } from '../store/ShopContext'
 import RouteSeo from './RouteSeo'
 import PageAnalytics from './PageAnalytics'
+import CompareTray from './CompareTray'
 
 const QuickViewModal = lazy(() => import('./QuickViewModal'))
 const SearchOverlay = lazy(() => import('./SearchOverlay'))
@@ -40,6 +41,8 @@ export default function Layout() {
     {actionToast && <div className="global-commerce-toast" role="status"><span>VELOURA</span><strong>{actionToast}</strong></div>}
 
     <main id="main-content" tabIndex={-1}><div key={`${location.pathname}${location.search}`} className="route-stage"><Outlet /></div></main>
+
+    <CompareTray/>
 
     <nav className="mobile-dock" aria-label="Mobile navigation"><NavLink to="/" end><Home size={20}/><span>Home</span></NavLink><button type="button" onClick={() => setSearchOpen(true)}><Search size={20}/><span>Search</span></button><NavLink to="/wishlist" className="badge-wrap"><Heart size={20}/><span>Wishlist</span>{wishlist.length > 0 && <b>{wishlist.length}</b>}</NavLink><NavLink to="/cart" className="badge-wrap"><ShoppingBag size={20}/><span>Bag</span>{cartCount > 0 && <b>{cartCount}</b>}</NavLink><NavLink to="/account"><UserRound size={20}/><span>Profile</span></NavLink></nav>
 
