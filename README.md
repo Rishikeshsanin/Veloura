@@ -84,3 +84,24 @@ npm run build
 - The current live commerce layer works locally without database availability.
 - No existing Project Hub schema may be modified for Veloura.
 - Backend activation is restricted to the dedicated `veloura` schema and a scoped server credential; the shared service-role key must never be used by the storefront.
+
+
+## V12 final hardening
+
+The final storefront hardening pass adds:
+
+- synonym-aware and typo-tolerant ranked search
+- search correction and zero-result recovery
+- keyboard-navigable search and modal focus trapping
+- live wishlist price/stock refresh with price-drop and back-in-stock signals
+- route-aware canonical metadata, Open Graph/Twitter metadata, robots.txt and sitemap.xml
+- factual Product + Breadcrumb JSON-LD without pretending sandbox checkout is live retail fulfilment
+- authenticated, account-scoped commerce analytics events
+- complete password-reset flow including setting a new password
+- atomic authenticated order creation through `veloura.create_order_snapshot`
+- immutable browser-side order item history after creation
+- restricted order cancellation columns
+- private reviewer/order linkage with `veloura.review_eligibility`
+- verified-purchase review eligibility that cannot be forged by creating a fake delivered order in the browser
+
+Payment and physical fulfilment remain intentionally sandboxed. Real card/UPI credentials are never stored by Veloura.
