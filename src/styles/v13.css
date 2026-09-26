@@ -113,3 +113,26 @@
   .review-photo-previews img,.verified-review-images img{width:64px;height:78px}
   .review-photo-previews>span{width:64px;height:78px}
 }
+
+
+/* V14 accessibility: preserve the palette while meeting contrast and heading semantics. */
+.site-header .brand span{color:#6f6762}
+.eyebrow{color:#6b625d}
+.trust-strip span,.catalog-scale-strip span,.coupon-card span,.breadcrumbs{color:#5f5955}
+.look-product-list a>b{color:#6b5e57}
+.footer-grid h2{font-size:10px;letter-spacing:.12em;text-transform:uppercase;margin:0 0 17px}
+.footer-story-link{color:#e6ddd7!important}
+.footer-newsletter small,.footer-bottom,.footer-assurance span{color:#bdb3ac}
+
+.section-heading p,.section-heading>a{color:#625a55}
+.look-product-list small{color:#625951}
+.phone-screen small{color:#6b6764}
+
+
+/* V14 a11y follow-up: colors verified against their rendered surfaces. */
+.utility-bar{color:#5f5955}
+.desktop-search,.desktop-search>span{color:#5f5955}
+.category-circle small{color:#5f5955}
+.look-copy>p{color:#625951}
+.price-line s{color:#66615d}
+@media(max-width:680px){.mobile-dock a,.mobile-dock button{color:#5f5955}}

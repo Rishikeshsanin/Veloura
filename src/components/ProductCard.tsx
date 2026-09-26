@@ -59,7 +59,7 @@ export default function ProductCard({ product, compact = false }: { product: Pro
 
   return <article className={`product-card ${compact ? 'compact' : ''} image-mode-${imageMode}`} data-category={product.category} onMouseEnter={prefetchDetail} onFocus={prefetchDetail}>
     <div className="product-media">
-      <Link className="product-image-link" to={productHref} aria-label={product.title}>
+      <Link className="product-image-link" to={productHref}>
         {primaryImage ? <>
           <div className={`product-image-loading ${primaryReady ? 'hidden' : ''}`} aria-hidden="true"><strong>V</strong><span>VELOURA</span></div>
           <ResponsiveImage className={`product-image primary-image ${primaryReady ? 'primary-ready' : ''} ${secondaryReady ? 'has-secondary' : ''}`} src={primaryImage} sizes="(max-width: 680px) 56vw, (max-width: 1100px) 32vw, 260px" alt={product.title} loading="lazy" decoding="async" onLoad={() => setPrimaryReady(true)} onError={primaryFailed} />

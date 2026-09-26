@@ -21,12 +21,11 @@ test('shop route and customer account surface are reachable', async ({page}) => 
   await page.goto('/shop?category=womens-dresses')
   await expect(page.locator('h1').first()).toContainText(/Dresses/i)
   await page.goto('/login')
-  await expect(page.locator('body')).toContainText(/Sign in|Create account|Veloura/i)
+  await expect(page.getByRole('heading',{level:2,name:'Sign in to your edit.'})).toBeVisible({timeout:20_000})
 })
 
 test('compare page renders persisted products side by side', async ({page}) => {
-  await page.goto('/')
-  await page.evaluate((items)=>localStorage.setItem('veloura_compare_v1',JSON.stringify(items)),mockCompare)
+  await page.addInitScript((items)=>localStorage.setItem('veloura_compare_v1',JSON.stringify(items)),mockCompare)
   await page.goto('/compare')
   await expect(page.getByRole('heading',{name:'Compare styles'})).toBeVisible()
   await expect(page.locator('.compare-product-head')).toHaveCount(2)
