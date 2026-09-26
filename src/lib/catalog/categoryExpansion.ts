@@ -11,9 +11,6 @@ import {
 
 type LooseObject = Record<string, unknown>
 type SoleScoutPayload = { total?: number; page?: number; count?: number; results?: LooseObject[] }
-type BeautyProduct = { code?: string; product_name?: string; brands?: string; categories?: string; quantity?: string; image_url?: string; image_front_url?: string; image_ingredients_url?: string; image_packaging_url?: string }
-type BeautyPayload = { products?: BeautyProduct[] }
-
 const TARGET_PER_CATEGORY = 240
 const CATEGORY_CACHE_TTL = 45 * 60 * 1000
 const EARLY_EXIT_TARGET = 210
@@ -101,28 +98,6 @@ async function loadFashionCategory(category:string) {
   const combined = [...firstPass,...secondPass]
   if (combined.length >= EARLY_EXIT_TARGET) return combined
   return [...combined,...await loadSoleScoutBatch(terms,[5],category)]
-}
-
-function normalizeBeauty(item: BeautyProduct, category:string): Product | null {
-  const title = item.product_name?.trim() || ''
-  const images = uniqueExternalImages([item.image_front_url,item.image_url,item.image_packaging_url,item.image_ingredients_url])
-  if (!title || !images.length) return null
-  const seedKey = item.code || `${title}:${item.brands ?? ''}`
-  const seed = stableHash(seedKey)
-  return { id:stableNumericId(870000,seedKey), title, description:`${item.brands ? `${item.brands}. ` : ''}${item.categories || category.replace('womens-','').replaceAll('-',' ')}${item.quantity ? ` · ${item.quantity}` : ''}`, category, price:8+(seed%65), discountPercentage:deterministicDiscount(seed,8,27), rating:4+(seed%10)/10, stock:deterministicStock(seed), brand:item.brands?.split(',')[0]?.trim() || 'Beauty Edit', thumbnail:images[0], images, tags:['women','beauty',category.replace('womens-','')], gender:'women', source:'openbeauty', sourceId:seedKey, sourceLabel:'Open Beauty Facts deep catalog', sizes:['One Size'] }
-}
-
-async function loadBeautyBatch(terms:string[], pages:number[], category:string) {
-  const fields='code,product_name,brands,categories,quantity,image_url,image_front_url,image_ingredients_url,image_packaging_url'
-  const tasks = terms.flatMap((term) => pages.map(() => term)).map((term,index) => {
-    const page = pages[index % pages.length]
-    return async () => {
-      const payload = await fetchProviderJson<BeautyPayload>(`/catalog-source/openbeauty?categories_tags_en=${encodeURIComponent(term)}&page=${page}&page_size=80&fields=${fields}`)
-      return (payload.products ?? []).map((item) => normalizeBeauty(item,category)).filter((item): item is Product => Boolean(item))
-    }
-  })
-  const settled = await runWithConcurrency(tasks,6)
-  return settled.flatMap((result) => result.status === 'fulfilled' ? result.value : [])
 }
 
 async function loadBeautyCategory(category:string) {
