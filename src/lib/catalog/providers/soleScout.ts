@@ -1,5 +1,5 @@
 import type { Product } from '../../../types'
-import { deterministicDiscount, deterministicStock, fetchProviderJson, matchesCategoryText, sizesForCategory, stableHash, stableNumericId, uniqueExternalImages, type ManagedProvider } from './shared'
+import { fetchProviderJson, matchesCategoryText, stableNumericId, uniqueExternalImages, type ManagedProvider } from './shared'
 
 type LooseObject = Record<string, unknown>
 
@@ -42,10 +42,10 @@ async function loadSoleScout() {
       if (!images.length) return null
       const current=pickNumber(item,['lowest_price_usd','price_usd','lowest_price','price','current_price'])
       const retail=pickNumber(item,['retail_price_usd','retail_price','msrp','original_price'])
-      const seed=stableHash(slug)
-      const price=retail || current || 65+(seed%120)
-      const computedDiscount=retail && current && retail > current ? Math.round((1-current/retail)*100) : deterministicDiscount(seed,12,32)
-      return { id:stableNumericId(800000,slug), title, description:`Women’s ${category.replace('womens-','').replaceAll('-',' ')} style from a broad fashion marketplace index.`, category, price, discountPercentage:Math.max(0,Math.min(75,computedDiscount)), rating:4.2+(seed%8)/10, stock:deterministicStock(seed), brand:pickString(item,['brand','brand_name','manufacturer']) || 'Marketplace Edit', sku:pickString(item,['style_code','sku']) || undefined, thumbnail:images[0], images, tags:['women','marketplace',query], gender:'women', source:'solescout', sourceId:slug, sourceUrl:pickString(item,['url','product_url']) || `https://solescout.ai/search?q=${encodeURIComponent(title)}`, sourceLabel:'SoleScout discovery', color:pickString(item,['color','colour']) || undefined, sizes:sizesForCategory(category) }
+      const price=retail ?? current
+      if (!price) return null
+      const computedDiscount=retail && current && retail > current ? Math.round((1-current/retail)*100) : undefined
+      return { id:stableNumericId(800000,slug), title, description:`Women’s ${category.replace('womens-','').replaceAll('-',' ')} style from a broad fashion marketplace index.`, category, price, discountPercentage:computedDiscount, brand:pickString(item,['brand','brand_name','manufacturer']) || undefined, sku:pickString(item,['style_code','sku']) || undefined, thumbnail:images[0], images, tags:['women','marketplace',query], gender:'women', source:'solescout', sourceId:slug, sourceUrl:pickString(item,['url','product_url']) || `https://solescout.ai/search?q=${encodeURIComponent(title)}`, sourceLabel:'SoleScout discovery', color:pickString(item,['color','colour']) || undefined }
     }).filter((product): product is Product => Boolean(product))
   }))
   return settled.flatMap((result) => result.status === 'fulfilled' ? result.value : [])

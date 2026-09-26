@@ -43,20 +43,6 @@ async function fetchJson<T>(url: string): Promise<T> {
   }
 }
 
-function deterministicDiscount(seed: number, min = 14, spread = 30) {
-  return min + ((seed * 11) % spread)
-}
-
-function deterministicStock(seed: number) {
-  return 7 + ((seed * 17) % 46)
-}
-
-function sizesFor(category: string) {
-  if (category === 'womens-shoes') return ['36', '37', '38', '39', '40']
-  if (['womens-bags', 'womens-jewellery', 'womens-beauty'].includes(category)) return ['One Size']
-  return ['XS', 'S', 'M', 'L', 'XL']
-}
-
 function titleCase(value?: string | null) {
   if (!value) return undefined
   return value.split(/[\s_-]+/).filter(Boolean).map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(' ')
@@ -129,7 +115,6 @@ async function loadDummyJson() {
         gender: 'women',
         source: 'dummyjson',
         sourceId: String(item.id),
-        sizes: sizesFor(category),
       }
     })
   }))
@@ -159,17 +144,13 @@ async function loadFakeStore() {
         description: item.description,
         category,
         price: item.price,
-        discountPercentage: deterministicDiscount(item.id, 18, 26),
         rating: item.rating?.rate,
-        stock: deterministicStock(item.id),
-        brand: 'Veloura Market',
         thumbnail: images[0] ?? '',
         images,
         tags: ['women', item.category],
         gender: 'women',
         source: 'fakestore',
         sourceId: String(item.id),
-        sizes: sizesFor(category),
       }
     })
 }
@@ -203,17 +184,12 @@ async function loadPlatzi() {
         description: item.description,
         category,
         price: item.price,
-        discountPercentage: deterministicDiscount(item.id, 12, 32),
-        rating: 4 + ((item.id * 13) % 9) / 10,
-        stock: deterministicStock(item.id),
-        brand: titleCase(item.category?.name) || 'Studio Edit',
         thumbnail: images[0] ?? '',
         images,
         tags: ['women', item.category?.slug ?? 'fashion'],
         gender: 'women',
         source: 'platzi',
         sourceId: String(item.id),
-        sizes: sizesFor(category),
       }
     })
 }
@@ -237,28 +213,26 @@ async function loadMakeup() {
   const settled = await Promise.allSettled(types.map((type) => fetchJson<MakeupProduct[]>(`https://makeup-api.herokuapp.com/api/v1/products.json?product_type=${type}`)))
   const raw = settled.flatMap((result) => result.status === 'fulfilled' ? result.value : [])
   const byId = Array.from(new Map(raw.map((item) => [item.id, item])).values())
-  return byId.slice(0, 90).map<Product>((item) => {
+  return byId.slice(0, 90).map<Product | null>((item) => {
     const images = uniqueImages([item.image_link, item.api_featured_image])
     const parsedPrice = Number.parseFloat(item.price ?? '')
+    if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) return null
     return {
       id: 400000 + item.id,
       title: item.name || `${titleCase(item.product_type) || 'Beauty'} Essential`,
       description: item.description?.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() || 'A women’s beauty favourite selected for the Veloura beauty edit.',
       category: 'womens-beauty',
-      price: Number.isFinite(parsedPrice) && parsedPrice > 0 ? parsedPrice : 12 + (item.id % 28),
-      discountPercentage: deterministicDiscount(item.id, 10, 28),
-      rating: item.rating ?? 4 + ((item.id * 7) % 8) / 10,
-      stock: deterministicStock(item.id),
-      brand: titleCase(item.brand) || 'Beauty Edit',
+      price: parsedPrice,
+      rating: typeof item.rating === 'number' && Number.isFinite(item.rating) ? item.rating : undefined,
+      brand: titleCase(item.brand),
       thumbnail: images[0] ?? '',
       images,
       tags: ['women', 'beauty', item.product_type ?? '', ...(item.tag_list ?? [])].filter(Boolean),
       gender: 'women',
       source: 'makeup',
       sourceId: String(item.id),
-      sizes: ['One Size'],
     }
-  })
+  }).filter((product): product is Product => Boolean(product))
 }
 
 export const catalogProviders: CatalogProvider[] = [

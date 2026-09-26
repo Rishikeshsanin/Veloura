@@ -1,12 +1,8 @@
 import type { Product } from '../../../types'
 import {
-  deterministicDiscount,
-  deterministicStock,
   fetchProviderText,
   inferCategory,
   postProviderJson,
-  sizesForCategory,
-  stableHash,
   stableNumericId,
   uniqueExternalImages,
   type ManagedProvider,
@@ -135,19 +131,18 @@ async function loadStore(entry: DirectoryEntry) {
     if (!images.length) return null
 
     const amount = Number(item.priceRange?.minVariantPrice?.amount)
+    if (!Number.isFinite(amount) || amount <= 0) return null
     const seedKey = `${entry.store}:${item.id || item.handle || item.title}`
-    const seed = stableHash(seedKey)
+    const availableForSale = item.variants?.nodes?.[0]?.availableForSale
 
     return {
       id: stableNumericId(620000, seedKey),
       title: item.title,
       description: item.description?.trim() || `Women’s ${category.replace('womens-', '').replaceAll('-', ' ')} from ${entry.name}.`,
       category,
-      price: Number.isFinite(amount) && amount > 0 ? amount : 45 + (seed % 120),
-      discountPercentage: deterministicDiscount(seed, 10, 30),
-      rating: 4.3 + (seed % 7) / 10,
-      stock: item.variants?.nodes?.[0]?.availableForSale === false ? 0 : deterministicStock(seed),
-      brand: item.vendor?.trim() || entry.name,
+      price: amount,
+      stock: availableForSale === false ? 0 : undefined,
+      brand: item.vendor?.trim() || undefined,
       thumbnail: images[0],
       images,
       tags: ['women', 'shopify', entry.store, item.productType ?? '', ...(item.tags ?? [])].filter(Boolean),
@@ -155,7 +150,6 @@ async function loadStore(entry: DirectoryEntry) {
       source: 'mockshop',
       sourceId: seedKey,
       sourceLabel: `Shopify mock.shop · ${entry.name}`,
-      sizes: sizesForCategory(category),
     }
   }).filter((product): product is Product => Boolean(product))
 

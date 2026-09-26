@@ -1,5 +1,5 @@
 import type { Product } from '../../../types'
-import { fetchProviderJson, sizesForCategory, uniqueExternalImages, type ManagedProvider } from './shared'
+import { fetchProviderJson, uniqueExternalImages, type ManagedProvider } from './shared'
 
 type DummyProduct = {
   id: number
@@ -46,7 +46,6 @@ async function loadDummyDepartments() {
         source: 'dummyjson',
         sourceId: `${remote}-${item.id}`,
         sourceLabel: 'DummyJSON department feed',
-        sizes: sizesForCategory(category),
       }
     })
   }))

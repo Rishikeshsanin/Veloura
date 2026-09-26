@@ -1,5 +1,4 @@
 import { WOMEN_CATEGORIES } from '../../data/catalog'
-import { fallbackProducts } from '../../data/fallback'
 import type { Product } from '../../types'
 import { fetchCategoryExpansion, clearCategoryExpansionCache } from './categoryExpansion'
 import { externalCatalogProviders } from './externalProviders'
@@ -7,7 +6,7 @@ import { catalogProviders, isUsableImage, normalizeImageUrl } from './providers'
 import { matchesCategoryText, type ManagedProvider } from './providers/shared'
 
 const ALLOWED_CATEGORIES = new Set(WOMEN_CATEGORIES.map((category) => category.value))
-const CACHE_KEY = 'veloura:catalog:v12'
+const CACHE_KEY = 'veloura:catalog:v14-truth'
 const CACHE_TTL = 15 * 60 * 1000
 const CATEGORY_LIMIT = 240
 const CATEGORY_CACHE_TTL = 30 * 60 * 1000
@@ -52,8 +51,15 @@ function sanitizeProduct(product:Product):Product|null {
     if (!matchesCategoryText(product.category,evidence)) return null
   }
   const images=Array.from(new Set([...(product.images??[]),product.thumbnail].map(normalizeImageUrl).filter(isUsableImage)))
-  if (!images.length || !product.title?.trim()) return null
-  return {...product,title:product.title.trim(),description:product.description?.trim()||'Selected for the Veloura women’s edit.',thumbnail:images[0],images,rating:Math.max(3.8,Math.min(5,product.rating??4.4)),stock:Math.max(0,product.stock??18)}
+  const price=Number(product.price)
+  if (!images.length || !product.title?.trim() || !Number.isFinite(price) || price <= 0) return null
+  const rating=typeof product.rating === 'number' && Number.isFinite(product.rating) ? Math.max(0,Math.min(5,product.rating)) : undefined
+  const stock=typeof product.stock === 'number' && Number.isFinite(product.stock) ? Math.max(0,Math.floor(product.stock)) : undefined
+  const discountPercentage=typeof product.discountPercentage === 'number' && Number.isFinite(product.discountPercentage)
+    ? Math.max(0,Math.min(100,product.discountPercentage))
+    : undefined
+  const sizes=product.sizes?.map((size)=>size.trim()).filter(Boolean)
+  return {...product,title:product.title.trim(),description:product.description?.trim()||'Selected for the Veloura women’s edit.',price,thumbnail:images[0],images,rating,stock,discountPercentage,sizes:sizes?.length?Array.from(new Set(sizes)):undefined}
 }
 
 function dedupeAndBalance(input:Product[]) {
@@ -105,9 +111,7 @@ export async function fetchManagedCatalog(forceRefresh=false):Promise<Product[]>
   pendingCatalog=(async()=>{
     providerHealth=[]
     const providerResults=await Promise.all(allProviders.map(loadProvider))
-    providerHealth.push({id:'curated',label:'Veloura curated reserve',status:'ready',count:fallbackProducts.length,durationMs:0})
-    const catalog=dedupeAndBalance([...providerResults.flat(),...fallbackProducts])
-    const finalCatalog=catalog.length>=18?catalog:dedupeAndBalance([...fallbackProducts,...providerResults.flat()])
+    const finalCatalog=dedupeAndBalance(providerResults.flat())
     catalogCache=finalCatalog; writeSessionCache(finalCatalog)
     if (import.meta.env.DEV) { console.table(providerHealth.map(({id,status,count,durationMs,message})=>({id,status,count,durationMs,message}))); console.info(`[Veloura Catalog] ${finalCatalog.length} unique women’s products after quality gates and image dedupe.`) }
     return finalCatalog
@@ -124,7 +128,7 @@ export async function fetchManagedHomeCatalog():Promise<Product[]> {
 
   pendingHomeCatalog=(async()=>{
     const providerResults=await Promise.all(homeProviders.map(loadProviderQuiet))
-    const catalog=dedupeAndBalance([...providerResults.flat(),...fallbackProducts])
+    const catalog=dedupeAndBalance(providerResults.flat())
     homeCatalogCache=catalog
     return catalog
   })()
@@ -136,7 +140,7 @@ export async function fetchManagedCategory(category:string) {
   if (!ALLOWED_CATEGORIES.has(category)) return base
   const cached=categoryCache.get(category); if (cached && cached.expires>Date.now()) return cached.products
   const expansion=await fetchCategoryExpansion(category)
-  const merged=dedupeAndBalance([...base.filter((product)=>product.category===category),...expansion,...fallbackProducts.filter((product)=>product.category===category)]).filter((product)=>product.category===category)
+  const merged=dedupeAndBalance([...base.filter((product)=>product.category===category),...expansion]).filter((product)=>product.category===category)
   categoryCache.set(category,{expires:Date.now()+CATEGORY_CACHE_TTL,products:merged}); return merged
 }
 

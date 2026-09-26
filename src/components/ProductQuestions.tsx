@@ -5,7 +5,7 @@ import type { Product } from '../types'
 export default function ProductQuestions({product}:{product:Product}){
   const sizeAnswer=product.sizes?.length
     ? `Available options: ${product.sizes.join(', ')}. Brand-specific sizing can vary.`
-    : 'This catalog item uses provider-specific or one-size sizing.'
+    : 'The provider did not supply selectable size options for this catalog item.'
   const stockAnswer=product.stock===0
     ? 'This item is currently marked out of stock.'
     : product.stock!==undefined
@@ -21,7 +21,7 @@ export default function ProductQuestions({product}:{product:Product}){
     ['What colour is shown?',product.color?`The catalog colour is listed as ${product.color}.`:'The provider did not supply a reliable colour label.'],
     ['What department is this in?',`Veloura classifies this item under ${categoryLabel(product.category)}.`],
     ['Where does the product information come from?',sourceAnswer],
-    ['Can I return it?','Eligible items use Veloura’s represented 30-day return window. Payment and physical fulfilment are still sandboxed, so no real courier return is created today.'],
+    ['Can I return it?','The storefront represents a sandbox 30-day return policy for eligible items. No real courier return is created while physical fulfilment remains inactive.'],
   ]
 
   return <section className="product-questions">
