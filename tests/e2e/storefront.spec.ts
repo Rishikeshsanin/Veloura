@@ -100,7 +100,7 @@ async function seedFakeSession(page: import('@playwright/test').Page,userId:stri
     const encode=(value:unknown)=>btoa(JSON.stringify(value)).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_')
     const now=Math.floor(Date.now()/1000)
     const accessToken=`${encode({alg:'HS256',typ:'JWT'})}.${encode({sub:userId,aud:'authenticated',role:'authenticated',email,exp:now+3600,iat:now})}.test`
-    localStorage.setItem(key,JSON.stringify({
+    if (!localStorage.getItem(key)) localStorage.setItem(key,JSON.stringify({
       access_token:accessToken,
       refresh_token:'test-refresh-token',
       token_type:'bearer',
