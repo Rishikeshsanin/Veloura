@@ -12,6 +12,7 @@ Veloura V14 treats QA as a permanent part of the repository rather than a one-of
 - Chromium desktop smoke tests
 - Chromium mobile-emulation smoke tests
 - Firefox desktop smoke tests
+- WebKit desktop smoke tests
 - WebKit iPhone mobile-emulation smoke tests
 - mobile horizontal-overflow regression checks
 - Compare Tray vs mobile bottom-dock collision check
@@ -74,6 +75,7 @@ Automated browser coverage uses:
 - Desktop Chromium
 - Pixel 7 mobile emulation in Chromium
 - Desktop Firefox
+- Desktop Safari emulation in WebKit
 - iPhone 13 mobile emulation in WebKit
 
 The cross-browser matrix catches layout and interaction regressions across Chromium, Firefox and WebKit engines. Emulation is still not a substitute for physical-device QA, so physical iOS/Safari and Android checks remain a manual release sanity check when a real-device lab is available.
