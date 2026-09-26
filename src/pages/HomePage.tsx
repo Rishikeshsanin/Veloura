@@ -9,7 +9,7 @@ import ShopTheLook from '../components/ShopTheLook'
 import { WOMEN_CATEGORIES, categoryLabel } from '../data/catalog'
 import { fetchHomeCatalog } from '../lib/api'
 import { getProductPricing } from '../lib/money'
-import { recommendForYou, topPreference, trendingProducts } from '../lib/personalization'
+import { recommendForYou, topPreference } from '../lib/personalization'
 import { productMerchandisingScore } from '../lib/productIntelligence'
 import { useShop } from '../store/ShopContext'
 import type { Product } from '../types'
@@ -33,11 +33,11 @@ export default function HomePage() {
   }, [])
 
   const merchandising = useMemo(() => {
-    const byDiscount = [...products].sort((a, b) => (b.discountPercentage ?? 0) - (a.discountPercentage ?? 0))
-    const byRating = trendingProducts(products, 24)
+    const byDiscount = products.filter((product) => (product.discountPercentage ?? 0) > 0).sort((a, b) => (b.discountPercentage ?? 0) - (a.discountPercentage ?? 0))
+    const byRating = products.filter((product) => product.rating !== undefined).sort((a,b) => (b.rating ?? 0) - (a.rating ?? 0))
     const under999 = products.filter((product) => getProductPricing(product).selling <= 999)
     const under1499 = products.filter((product) => getProductPricing(product).selling <= 1499)
-    const newDrops = [...products].sort((a, b) => b.id - a.id)
+    const catalogPicks = [...products].sort((a,b) => productMerchandisingScore(b) - productMerchandisingScore(a))
 
     return {
       bestDeals: byDiscount.slice(0, 16),
@@ -51,7 +51,7 @@ export default function HomePage() {
       layers: inCategories(products, ['womens-denim', 'womens-outerwear', 'womens-winterwear']).slice(0, 16),
       ethnic: inCategories(products, ['womens-ethnicwear']).slice(0, 16),
       budget: (under999.length >= 8 ? under999 : under1499).slice(0, 16),
-      newDrops: newDrops.slice(0, 16),
+      catalogPicks: catalogPicks.slice(0, 16),
       multiImage: products.filter((product) => product.images.length >= 2).length,
       covered: new Set(products.map((product) => product.category)).size,
     }
@@ -87,23 +87,23 @@ export default function HomePage() {
       <Link className="hero-main" to="/shop?category=womens-dresses">
         <ResponsiveImage src="https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=2200&q=94" sizes="(max-width: 900px) 100vw, 72vw" alt="Veloura women's fashion new season" fetchPriority="high" decoding="async" />
         <div className="hero-overlay" />
-        <div className="hero-content"><span>THE BIG WOMEN'S EDIT · 2026</span><h1>New season.<br />Main character energy.</h1><p>Fashion, footwear, accessories, beauty, skincare and more—one seriously big women-only destination.</p><div className="hero-actions"><span className="button light">Shop new in <ArrowRight size={17} /></span><span className="hero-offer">UP TO 60% OFF</span></div></div>
+        <div className="hero-content"><span>THE BIG WOMEN'S EDIT · 2026</span><h1>New season.<br />Main character energy.</h1><p>Fashion, footwear, accessories, beauty, skincare and more—one seriously big women-only destination.</p><div className="hero-actions"><span className="button light">Shop new in <ArrowRight size={17} /></span><span className="hero-offer">LIVE CATALOG EDIT</span></div></div>
       </Link>
       <div className="hero-side">
         <Link className="hero-tile" to="/shop?category=womens-ethnicwear"><ResponsiveImage src="https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=1000&q=92" sizes="(max-width: 900px) 50vw, 28vw" alt="Women's ethnic wear" loading="lazy" decoding="async" /><div><small>FESTIVE STORE</small><strong>Modern ethnic, major compliments</strong><span>Shop now <ChevronRight size={15} /></span></div></Link>
-        <Link className="hero-tile" to="/shop?sort=discount"><ResponsiveImage src="https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1000&q=92" sizes="(max-width: 900px) 50vw, 28vw" alt="Women's fashion sale" loading="lazy" decoding="async" /><div><small>PRICE DROP</small><strong>Big-store energy, better prices</strong><span>Explore sale <ChevronRight size={15} /></span></div></Link>
+        <Link className="hero-tile" to="/shop?sort=discount"><ResponsiveImage src="https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1000&q=92" sizes="(max-width: 900px) 50vw, 28vw" alt="Women's fashion sale" loading="lazy" decoding="async" /><div><small>DISCOVER MORE</small><strong>More women’s styles, one catalog</strong><span>Explore catalog <ChevronRight size={15} /></span></div></Link>
       </div>
     </section>
 
     <CampaignStory />
 
-    <section className="trust-strip marketplace-trust"><div><Truck /><span><strong>Free delivery</strong>Above ₹1,499</span></div><div><RotateCcw /><span><strong>Easy returns</strong>30-day window</span></div><div><ShieldCheck /><span><strong>Secure checkout</strong>No payment data stored</span></div><div><Sparkles /><span><strong>Women-only universe</strong>22 structured departments</span></div></section>
+    <section className="trust-strip marketplace-trust"><div><Truck /><span><strong>Sandbox delivery</strong>Free above ₹1,499 in the checkout model</span></div><div><RotateCcw /><span><strong>Sandbox returns</strong>30-day represented window</span></div><div><ShieldCheck /><span><strong>Sandbox checkout</strong>No real payment request is sent</span></div><div><Sparkles /><span><strong>Women-only universe</strong>22 structured departments</span></div></section>
 
-    {!loading && <section className="catalog-scale-strip container-wide"><div><strong>{products.length.toLocaleString('en-IN')}</strong><span>unique styles live</span></div><div><strong>{merchandising.covered}</strong><span>departments with inventory</span></div><div><strong>{merchandising.multiImage.toLocaleString('en-IN')}</strong><span>multi-image products</span></div><div><strong>8+</strong><span>managed catalog feeds</span></div></section>}
+    {!loading && <section className="catalog-scale-strip container-wide"><div><strong>{products.length.toLocaleString('en-IN')}</strong><span>unique styles live</span></div><div><strong>{merchandising.covered}</strong><span>departments represented</span></div><div><strong>{merchandising.multiImage.toLocaleString('en-IN')}</strong><span>multi-image products</span></div><div><strong>8+</strong><span>managed catalog feeds</span></div></section>}
 
     <section className="category-shelf container-wide"><div className="section-heading simple-heading"><div><span className="eyebrow">SHOP WHAT YOU LOVE</span><h2>Explore the women’s universe</h2></div><Link to="/shop">View all <ArrowRight size={15} /></Link></div><div className="category-circles">{WOMEN_CATEGORIES.map((category) => <Link key={category.value} className="category-circle" to={`/shop?category=${category.value}`}><span><ResponsiveImage src={category.image} sizes="(max-width: 680px) 30vw, 140px" alt={category.label} loading="lazy" decoding="async" /></span><strong>{category.label}</strong><small>{category.blurb}</small></Link>)}</div></section>
 
-    <section className="coupon-section container-wide"><div className="section-heading simple-heading"><div><span className="eyebrow">MORE STYLE, LESS SPEND</span><h2>Offers for you</h2></div></div><div className="coupon-grid"><div className="coupon-card"><BadgePercent /><div><small>FIRST ORDER</small><strong>Extra 10% off</strong><span>Use code <b>HELLOVELOURA</b></span></div></div><div className="coupon-card"><BadgePercent /><div><small>ORDER OFFER</small><strong>₹300 off</strong><span>On orders above ₹1,999</span></div></div><div className="coupon-card"><Truck /><div><small>FREE SHIPPING</small><strong>Zero delivery fee</strong><span>On orders above ₹1,499</span></div></div><div className="coupon-card"><Sparkles /><div><small>WEEKEND DROP</small><strong>Up to 60% off</strong><span>Selected women’s styles</span></div></div></div></section>
+    <section className="coupon-section container-wide"><div className="section-heading simple-heading"><div><span className="eyebrow">SANDBOX CHECKOUT OFFERS</span><h2>Offers represented in the demo</h2></div></div><div className="coupon-grid"><div className="coupon-card"><BadgePercent /><div><small>FIRST ORDER</small><strong>Extra 10% off</strong><span>Use code <b>HELLOVELOURA</b></span></div></div><div className="coupon-card"><BadgePercent /><div><small>ORDER OFFER</small><strong>₹300 off</strong><span>On orders above ₹1,999</span></div></div><div className="coupon-card"><Truck /><div><small>FREE SHIPPING</small><strong>Zero delivery fee</strong><span>On orders above ₹1,499</span></div></div><div className="coupon-card"><Sparkles /><div><small>CATALOG TRUTH</small><strong>Source-backed facts</strong><span>Unknown commercial data stays unknown</span></div></div></div></section>
 
     {recentlyViewed.length > 0 && <ProductRail eyebrow="PICK UP WHERE YOU LEFT OFF" title="Recently viewed" subtitle="Your latest Veloura discoveries, saved on this device." products={recentlyViewed.slice(0,16)} />}
     {wishlist.length > 0 && <ProductRail eyebrow="YOUR SHORTLIST" title="Saved for later" subtitle="Pieces already on your radar." products={wishlist.slice(0,16)} href="/wishlist" />}
@@ -114,11 +114,11 @@ export default function HomePage() {
 
     {!loading && <ShopTheLook products={products} />}
 
-    {loading ? <LoadingRail /> : <ProductRail eyebrow="HOT RIGHT NOW" title="Trending now" subtitle="High-rated pieces across the women’s store." products={merchandising.topRated} href="/shop?sort=rating" />}
+    {loading ? <LoadingRail /> : <ProductRail eyebrow="SOURCE-RATED" title="Top rated" subtitle="Products with ratings supplied by their catalog source." products={merchandising.topRated} href="/shop?sort=rating" />}
 
     <section className="occasion-section container-wide"><div className="section-heading simple-heading"><div><span className="eyebrow">DRESS FOR THE PLAN</span><h2>Shop by occasion</h2><p>Open a full Veloura edit instead of another generic search page.</p></div><Link to="/edits">View all edits <ArrowRight size={15}/></Link></div><div className="occasion-grid">{occasionCards.map((card) => <Link className="occasion-card" key={card.title} to={`/edit/${card.slug}`}><ResponsiveImage src={card.image} sizes="(max-width: 680px) 50vw, 25vw" alt={card.title} loading="lazy" decoding="async" /><div className="occasion-overlay" /><div><span>{card.subtitle}</span><h3>{card.title}</h3><b>Shop the edit <ArrowRight size={15} /></b></div></Link>)}</div></section>
 
-    {!loading && <DeferredProductRail eyebrow="THE MARKDOWN EDIT" title="Biggest deals" subtitle="Fresh price drops across the women’s store." products={merchandising.bestDeals} href="/shop?sort=discount" />}
+    {!loading && merchandising.bestDeals.length > 0 && <DeferredProductRail eyebrow="THE MARKDOWN EDIT" title="Biggest source-listed deals" subtitle="Discounts shown only where the catalog source supplies enough pricing data." products={merchandising.bestDeals} href="/shop?sort=discount" />}
 
     {!loading && personal.topBrands.length > 0 && <section className="brand-deals container-wide"><div className="section-heading simple-heading"><div><span className="eyebrow">BRANDS IN YOUR STORE</span><h2>Explore labels with real catalog depth</h2></div></div><div className="brand-deal-grid">{personal.topBrands.map(([brand, data]) => <Link key={brand} to={`/brand/${encodeURIComponent(brand)}`} className="brand-deal-card"><ResponsiveImage src={data.product.images?.[0] || data.product.thumbnail} sizes="(max-width: 680px) 50vw, 25vw" alt={brand} loading="lazy" decoding="async" /><div><span>{data.count} STYLES LIVE</span><h3>{brand}</h3><b>Open brand store <ArrowRight size={14} /></b></div></Link>)}</div></section>}
 
@@ -134,7 +134,7 @@ export default function HomePage() {
     {!loading && <DeferredProductRail eyebrow="MOVE / SWIM / LOUNGE" title="Activewear and off-duty essentials" products={merchandising.movement} href="/shop?category=womens-activewear" />}
     {!loading && <DeferredProductRail eyebrow="DENIM & LAYERS" title="Jackets, denim, knits and outerwear" products={merchandising.layers} href="/shop?category=womens-outerwear" />}
     {!loading && merchandising.ethnic.length > 0 && <DeferredProductRail eyebrow="THE FESTIVE STORE" title="Ethnic dressing" products={merchandising.ethnic} href="/shop?category=womens-ethnicwear" />}
-    {!loading && <DeferredProductRail eyebrow="FRESH THIS WEEK" title="New drops" subtitle="Recently added across the Veloura women’s universe." products={merchandising.newDrops} href="/shop" />}
+    {!loading && <DeferredProductRail eyebrow="MORE TO EXPLORE" title="Catalog picks" subtitle="Additional styles ranked from the current catalog without implying a release date." products={merchandising.catalogPicks} href="/shop" />}
 
     <section className="category-wall container-wide"><div className="section-heading simple-heading"><div><span className="eyebrow">KEEP EXPLORING</span><h2>22 departments. Keep going.</h2></div></div><div className="category-wall-grid">{WOMEN_CATEGORIES.map((category, index) => <Link className={`category-wall-card c${index % 5}`} key={category.value} to={`/shop?category=${category.value}`}><ResponsiveImage src={category.image} sizes="(max-width: 680px) 50vw, 20vw" alt={category.label} loading="lazy" decoding="async" /><div><h3>{category.label}</h3><span>{category.blurb}</span><b>Shop now →</b></div></Link>)}</div></section>
 
@@ -143,5 +143,5 @@ export default function HomePage() {
 }
 
 function LoadingRail() {
-  return <section className="rail-section container"><div className="section-heading marketplace-heading"><div><span className="eyebrow">HOT RIGHT NOW</span><h2>Trending now</h2></div></div><div className="product-rail">{Array.from({ length: 6 }).map((_, index) => <div key={index} className="skeleton product-skeleton" />)}</div></section>
+  return <section className="rail-section container"><div className="section-heading marketplace-heading"><div><span className="eyebrow">SOURCE-RATED</span><h2>Top rated</h2></div></div><div className="product-rail">{Array.from({ length: 6 }).map((_, index) => <div key={index} className="skeleton product-skeleton" />)}</div></section>
 }
