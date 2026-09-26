@@ -1,5 +1,5 @@
 import { ArrowRight, BadgePercent, ChevronRight, RotateCcw, ShieldCheck, Sparkles, Truck } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ComponentProps } from 'react'
 import { Link } from 'react-router-dom'
 import ProductRail from '../components/ProductRail'
 import DeferredProductRail from '../components/DeferredProductRail'
@@ -112,29 +112,29 @@ export default function HomePage() {
     {!loading && personal.forYou.length > 0 && <ProductRail eyebrow="CURATED FOR YOU" title="Your Veloura edit" subtitle="Ranked from your recent browsing, saves and bag activity." products={personal.forYou} />}
     {!loading && personal.favoriteCategory && personal.becauseCategory.length > 0 && <ProductRail eyebrow="BECAUSE YOU KEEP EXPLORING" title={`More ${categoryLabel(personal.favoriteCategory)}`} subtitle="A deeper edit from the department you come back to most." products={personal.becauseCategory} href={`/shop?category=${personal.favoriteCategory}`} />}
 
-    {!loading && <ShopTheLook products={products} />}
+    {loading ? <LoadingRail eyebrow="SHOP THE LOOK" title="A complete look, built from the catalog" /> : <ShopTheLook products={products} />}
 
     {loading ? <LoadingRail /> : <ProductRail eyebrow="HOT RIGHT NOW" title="Trending now" subtitle="High-rated pieces across the women’s store." products={merchandising.topRated} href="/shop?sort=rating" />}
 
     <section className="occasion-section container-wide"><div className="section-heading simple-heading"><div><span className="eyebrow">DRESS FOR THE PLAN</span><h2>Shop by occasion</h2><p>Open a full Veloura edit instead of another generic search page.</p></div><Link to="/edits">View all edits <ArrowRight size={15}/></Link></div><div className="occasion-grid">{occasionCards.map((card) => <Link className="occasion-card" key={card.title} to={`/edit/${card.slug}`}><ResponsiveImage src={card.image} sizes="(max-width: 680px) 50vw, 25vw" alt={card.title} loading="lazy" decoding="async" /><div className="occasion-overlay" /><div><span>{card.subtitle}</span><h3>{card.title}</h3><b>Shop the edit <ArrowRight size={15} /></b></div></Link>)}</div></section>
 
-    {!loading && <DeferredProductRail eyebrow="THE MARKDOWN EDIT" title="Biggest deals" subtitle="Fresh price drops across the women’s store." products={merchandising.bestDeals} href="/shop?sort=discount" />}
+    {<CatalogRail loading={loading} eyebrow="THE MARKDOWN EDIT" title="Biggest deals" subtitle="Fresh price drops across the women’s store." products={merchandising.bestDeals} href="/shop?sort=discount" />}
 
-    {!loading && personal.topBrands.length > 0 && <section className="brand-deals container-wide"><div className="section-heading simple-heading"><div><span className="eyebrow">BRANDS IN YOUR STORE</span><h2>Explore labels with real catalog depth</h2></div></div><div className="brand-deal-grid">{personal.topBrands.map(([brand, data]) => <Link key={brand} to={`/brand/${encodeURIComponent(brand)}`} className="brand-deal-card"><ResponsiveImage src={data.product.images?.[0] || data.product.thumbnail} sizes="(max-width: 680px) 50vw, 25vw" alt={brand} loading="lazy" decoding="async" /><div><span>{data.count} STYLES LIVE</span><h3>{brand}</h3><b>Open brand store <ArrowRight size={14} /></b></div></Link>)}</div></section>}
+    {loading ? <LoadingRail eyebrow="BRANDS IN YOUR STORE" title="Explore labels with real catalog depth" /> : personal.topBrands.length > 0 && <section className="brand-deals container-wide"><div className="section-heading simple-heading"><div><span className="eyebrow">BRANDS IN YOUR STORE</span><h2>Explore labels with real catalog depth</h2></div></div><div className="brand-deal-grid">{personal.topBrands.map(([brand, data]) => <Link key={brand} to={`/brand/${encodeURIComponent(brand)}`} className="brand-deal-card"><ResponsiveImage src={data.product.images?.[0] || data.product.thumbnail} sizes="(max-width: 680px) 50vw, 25vw" alt={brand} loading="lazy" decoding="async" /><div><span>{data.count} STYLES LIVE</span><h3>{brand}</h3><b>Open brand store <ArrowRight size={14} /></b></div></Link>)}</div></section>}
 
-    {!loading && <DeferredProductRail eyebrow="EVERYDAY WINS" title="Under ₹999" subtitle="High rotation, low commitment." products={merchandising.budget} href="/shop?max=999" compact />}
-    {!loading && <DeferredProductRail eyebrow="THE DRESS STORE" title="Dresses for every version of tonight" subtitle="Mini, midi, maxi and occasion silhouettes with richer product galleries." products={merchandising.dresses} href="/shop?category=womens-dresses" />}
-    {!loading && <DeferredProductRail eyebrow="PUT TOGETHER IN SECONDS" title="Tops, co-ords & easy separates" products={merchandising.topsCoords} href="/shop?category=womens-tops" />}
-    {!loading && <DeferredProductRail eyebrow="FROM THE GROUND UP" title="The footwear store" subtitle="Sneakers, heels, flats, trainers and more." products={merchandising.footwear} href="/shop?category=womens-shoes" />}
+    {<CatalogRail loading={loading} eyebrow="EVERYDAY WINS" title="Under ₹999" subtitle="High rotation, low commitment." products={merchandising.budget} href="/shop?max=999" compact />}
+    {<CatalogRail loading={loading} eyebrow="THE DRESS STORE" title="Dresses for every version of tonight" subtitle="Mini, midi, maxi and occasion silhouettes with richer product galleries." products={merchandising.dresses} href="/shop?category=womens-dresses" />}
+    {<CatalogRail loading={loading} eyebrow="PUT TOGETHER IN SECONDS" title="Tops, co-ords & easy separates" products={merchandising.topsCoords} href="/shop?category=womens-tops" />}
+    {<CatalogRail loading={loading} eyebrow="FROM THE GROUND UP" title="The footwear store" subtitle="Sneakers, heels, flats, trainers and more." products={merchandising.footwear} href="/shop?category=womens-shoes" />}
 
     <section className="editorial-split container-wide"><div className="editorial-image"><ResponsiveImage src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1600&q=94" sizes="(max-width: 760px) 100vw, 50vw" alt="Women's fashion editorial" loading="lazy" decoding="async" /></div><div className="editorial-copy"><span className="eyebrow">THE VELOURA EDITOR'S DESK</span><h2>One wardrobe.<br />A hundred versions of you.</h2><p>Build from pieces that work harder: a sharp shirt, a great dress, easy co-ords and accessories that change the whole mood.</p><div className="editorial-links"><Link to="/shop?q=work">Workwear refresh <ArrowRight size={15} /></Link><Link to="/shop?q=party">After-dark edit <ArrowRight size={15} /></Link><Link to="/shop?q=vacation">Vacation packing list <ArrowRight size={15} /></Link></div></div></section>
 
-    {!loading && <DeferredProductRail eyebrow="THE GETTING-READY SHELF" title="Beauty, skincare, hair & fragrance" subtitle="Makeup, skin ritual, hair favourites and scent discoveries." products={merchandising.beauty} href="/shop?category=womens-beauty" />}
-    {!loading && <DeferredProductRail eyebrow="THE FINISHING TOUCH" title="Bags, jewellery, watches & shades" products={merchandising.bagsAndFinishing} href="/shop?category=womens-bags" />}
-    {!loading && <DeferredProductRail eyebrow="MOVE / SWIM / LOUNGE" title="Activewear and off-duty essentials" products={merchandising.movement} href="/shop?category=womens-activewear" />}
-    {!loading && <DeferredProductRail eyebrow="DENIM & LAYERS" title="Jackets, denim, knits and outerwear" products={merchandising.layers} href="/shop?category=womens-outerwear" />}
-    {!loading && merchandising.ethnic.length > 0 && <DeferredProductRail eyebrow="THE FESTIVE STORE" title="Ethnic dressing" products={merchandising.ethnic} href="/shop?category=womens-ethnicwear" />}
-    {!loading && <DeferredProductRail eyebrow="FRESH THIS WEEK" title="New drops" subtitle="Recently added across the Veloura women’s universe." products={merchandising.newDrops} href="/shop" />}
+    {<CatalogRail loading={loading} eyebrow="THE GETTING-READY SHELF" title="Beauty, skincare, hair & fragrance" subtitle="Makeup, skin ritual, hair favourites and scent discoveries." products={merchandising.beauty} href="/shop?category=womens-beauty" />}
+    {<CatalogRail loading={loading} eyebrow="THE FINISHING TOUCH" title="Bags, jewellery, watches & shades" products={merchandising.bagsAndFinishing} href="/shop?category=womens-bags" />}
+    {<CatalogRail loading={loading} eyebrow="MOVE / SWIM / LOUNGE" title="Activewear and off-duty essentials" products={merchandising.movement} href="/shop?category=womens-activewear" />}
+    {<CatalogRail loading={loading} eyebrow="DENIM & LAYERS" title="Jackets, denim, knits and outerwear" products={merchandising.layers} href="/shop?category=womens-outerwear" />}
+    {loading ? <LoadingRail eyebrow="THE FESTIVE STORE" title="Ethnic dressing" /> : merchandising.ethnic.length > 0 && <DeferredProductRail eyebrow="THE FESTIVE STORE" title="Ethnic dressing" products={merchandising.ethnic} href="/shop?category=womens-ethnicwear" />}
+    {<CatalogRail loading={loading} eyebrow="FRESH THIS WEEK" title="New drops" subtitle="Recently added across the Veloura women’s universe." products={merchandising.newDrops} href="/shop" />}
 
     <section className="category-wall container-wide"><div className="section-heading simple-heading"><div><span className="eyebrow">KEEP EXPLORING</span><h2>22 departments. Keep going.</h2></div></div><div className="category-wall-grid">{WOMEN_CATEGORIES.map((category, index) => <Link className={`category-wall-card c${index % 5}`} key={category.value} to={`/shop?category=${category.value}`}><ResponsiveImage src={category.image} sizes="(max-width: 680px) 50vw, 20vw" alt={category.label} loading="lazy" decoding="async" /><div><h3>{category.label}</h3><span>{category.blurb}</span><b>Shop now →</b></div></Link>)}</div></section>
 
@@ -142,6 +142,12 @@ export default function HomePage() {
   </>
 }
 
-function LoadingRail() {
-  return <section className="rail-section container"><div className="section-heading marketplace-heading"><div><span className="eyebrow">HOT RIGHT NOW</span><h2>Trending now</h2></div></div><div className="product-rail">{Array.from({ length: 6 }).map((_, index) => <div key={index} className="skeleton product-skeleton" />)}</div></section>
+function CatalogRail({ loading, ...props }: ComponentProps<typeof ProductRail> & { loading: boolean }) {
+  return loading
+    ? <LoadingRail eyebrow={props.eyebrow} title={props.title} compact={props.compact} />
+    : <DeferredProductRail {...props} />
+}
+
+function LoadingRail({ eyebrow = 'HOT RIGHT NOW', title = 'Trending now', compact = false }: { eyebrow?: string; title?: string; compact?: boolean }) {
+  return <section className="rail-section container" aria-hidden="true"><div className="section-heading marketplace-heading"><div><span className="eyebrow">{eyebrow}</span><h2>{title}</h2></div></div><div className={`product-rail ${compact ? 'compact' : ''}`}>{Array.from({ length: 6 }).map((_, index) => <div key={index} className="skeleton product-skeleton" />)}</div></section>
 }
