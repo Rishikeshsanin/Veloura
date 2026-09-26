@@ -1,5 +1,4 @@
 import { WOMEN_CATEGORIES } from '../../data/catalog'
-import { fallbackProducts } from '../../data/fallback'
 import type { Product } from '../../types'
 import { fetchCategoryExpansion, clearCategoryExpansionCache } from './categoryExpansion'
 import { externalCatalogProviders } from './externalProviders'
@@ -7,17 +6,21 @@ import { catalogProviders, isUsableImage, normalizeImageUrl } from './providers'
 import { matchesCategoryText, type ManagedProvider } from './providers/shared'
 
 const ALLOWED_CATEGORIES = new Set(WOMEN_CATEGORIES.map((category) => category.value))
-const CACHE_KEY = 'veloura:catalog:v12'
+const CACHE_KEY = 'veloura:catalog:v14-truth'
 const CACHE_TTL = 15 * 60 * 1000
 const CATEGORY_LIMIT = 240
 const CATEGORY_CACHE_TTL = 30 * 60 * 1000
 
 const allProviders: ManagedProvider[] = [...externalCatalogProviders,...catalogProviders].sort((a,b)=>b.priority-a.priority)
+const HOME_PROVIDER_IDS = new Set(['vaanzari','dummy-departments','dummyjson'])
+const homeProviders = allProviders.filter((provider)=>HOME_PROVIDER_IDS.has(provider.id))
 
 export type ProviderHealth = { id:string; label:string; status:'ready'|'failed'|'cached'; count:number; durationMs:number; message?:string }
 
 let catalogCache:Product[]|null=null
 let pendingCatalog:Promise<Product[]>|null=null
+let homeCatalogCache:Product[]|null=null
+let pendingHomeCatalog:Promise<Product[]>|null=null
 let providerHealth:ProviderHealth[]=[]
 const categoryCache=new Map<string,{expires:number;products:Product[]}>()
 
@@ -48,8 +51,15 @@ function sanitizeProduct(product:Product):Product|null {
     if (!matchesCategoryText(product.category,evidence)) return null
   }
   const images=Array.from(new Set([...(product.images??[]),product.thumbnail].map(normalizeImageUrl).filter(isUsableImage)))
-  if (!images.length || !product.title?.trim()) return null
-  return {...product,title:product.title.trim(),description:product.description?.trim()||'Selected for the Veloura women’s edit.',thumbnail:images[0],images,rating:Math.max(3.8,Math.min(5,product.rating??4.4)),stock:Math.max(0,product.stock??18)}
+  const price=Number(product.price)
+  if (!images.length || !product.title?.trim() || !Number.isFinite(price) || price <= 0) return null
+  const rating=typeof product.rating === 'number' && Number.isFinite(product.rating) ? Math.max(0,Math.min(5,product.rating)) : undefined
+  const stock=typeof product.stock === 'number' && Number.isFinite(product.stock) ? Math.max(0,Math.floor(product.stock)) : undefined
+  const discountPercentage=typeof product.discountPercentage === 'number' && Number.isFinite(product.discountPercentage)
+    ? Math.max(0,Math.min(100,product.discountPercentage))
+    : undefined
+  const sizes=product.sizes?.map((size)=>size.trim()).filter(Boolean)
+  return {...product,title:product.title.trim(),description:product.description?.trim()||'Selected for the Veloura women’s edit.',price,thumbnail:images[0],images,rating,stock,discountPercentage,sizes:sizes?.length?Array.from(new Set(sizes)):undefined}
 }
 
 function dedupeAndBalance(input:Product[]) {
@@ -78,6 +88,10 @@ function readSessionCache() {
 }
 function writeSessionCache(products:Product[]) { try { sessionStorage.setItem(CACHE_KEY,JSON.stringify({expires:Date.now()+CACHE_TTL,products})) } catch { /* in-memory cache still works */ } }
 
+async function loadProviderQuiet(provider:ManagedProvider) {
+  try { return await provider.load() } catch { return [] }
+}
+
 async function loadProvider(provider:ManagedProvider) {
   const started=performance.now()
   try {
@@ -97,9 +111,7 @@ export async function fetchManagedCatalog(forceRefresh=false):Promise<Product[]>
   pendingCatalog=(async()=>{
     providerHealth=[]
     const providerResults=await Promise.all(allProviders.map(loadProvider))
-    providerHealth.push({id:'curated',label:'Veloura curated reserve',status:'ready',count:fallbackProducts.length,durationMs:0})
-    const catalog=dedupeAndBalance([...providerResults.flat(),...fallbackProducts])
-    const finalCatalog=catalog.length>=18?catalog:dedupeAndBalance([...fallbackProducts,...providerResults.flat()])
+    const finalCatalog=dedupeAndBalance(providerResults.flat())
     catalogCache=finalCatalog; writeSessionCache(finalCatalog)
     if (import.meta.env.DEV) { console.table(providerHealth.map(({id,status,count,durationMs,message})=>({id,status,count,durationMs,message}))); console.info(`[Veloura Catalog] ${finalCatalog.length} unique women’s products after quality gates and image dedupe.`) }
     return finalCatalog
@@ -107,12 +119,28 @@ export async function fetchManagedCatalog(forceRefresh=false):Promise<Product[]>
   try { return await pendingCatalog } finally { pendingCatalog=null }
 }
 
+export async function fetchManagedHomeCatalog():Promise<Product[]> {
+  if (catalogCache) return catalogCache
+  const sessionCached=readSessionCache()
+  if (sessionCached?.length) { catalogCache=sessionCached; return sessionCached }
+  if (homeCatalogCache) return homeCatalogCache
+  if (pendingHomeCatalog) return pendingHomeCatalog
+
+  pendingHomeCatalog=(async()=>{
+    const providerResults=await Promise.all(homeProviders.map(loadProviderQuiet))
+    const catalog=dedupeAndBalance(providerResults.flat())
+    homeCatalogCache=catalog
+    return catalog
+  })()
+  try { return await pendingHomeCatalog } finally { pendingHomeCatalog=null }
+}
+
 export async function fetchManagedCategory(category:string) {
   const base=await fetchManagedCatalog()
   if (!ALLOWED_CATEGORIES.has(category)) return base
   const cached=categoryCache.get(category); if (cached && cached.expires>Date.now()) return cached.products
   const expansion=await fetchCategoryExpansion(category)
-  const merged=dedupeAndBalance([...base.filter((product)=>product.category===category),...expansion,...fallbackProducts.filter((product)=>product.category===category)]).filter((product)=>product.category===category)
+  const merged=dedupeAndBalance([...base.filter((product)=>product.category===category),...expansion]).filter((product)=>product.category===category)
   categoryCache.set(category,{expires:Date.now()+CATEGORY_CACHE_TTL,products:merged}); return merged
 }
 
@@ -128,4 +156,4 @@ export async function searchManagedCatalog(query:string) {
 }
 
 export function getCatalogDiagnostics(){ return providerHealth.map((entry)=>({...entry})) }
-export function clearCatalogCache(){ catalogCache=null; categoryCache.clear(); clearCategoryExpansionCache(); try { sessionStorage.removeItem(CACHE_KEY) } catch { /* noop */ } }
+export function clearCatalogCache(){ catalogCache=null; homeCatalogCache=null; categoryCache.clear(); clearCategoryExpansionCache(); try { sessionStorage.removeItem(CACHE_KEY) } catch { /* noop */ } }

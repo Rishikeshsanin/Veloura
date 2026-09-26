@@ -1,5 +1,5 @@
 import type { Product } from '../../../types'
-import { deterministicDiscount, deterministicStock, inferCategory, postProviderJson, sizesForCategory, stableHash, stableNumericId, uniqueExternalImages, type ManagedProvider } from './shared'
+import { inferCategory, postProviderJson, stableNumericId, uniqueExternalImages, type ManagedProvider } from './shared'
 
 type MockShopProduct = {
   id: string
@@ -50,18 +50,17 @@ async function loadMockShop() {
     const category = inferCategory(text, 'womens-tops')
     const images = uniqueExternalImages([item.featuredImage?.url, ...(item.images?.nodes ?? []).map((image) => image.url)])
     const amount = Number(item.priceRange?.minVariantPrice?.amount)
-    const seed = stableHash(item.id || item.handle || item.title)
+    if (!Number.isFinite(amount) || amount <= 0) return null
+    const availableForSale = item.variants?.nodes?.[0]?.availableForSale
 
     return {
       id: stableNumericId(650000, item.id || item.handle || item.title),
       title: item.title,
       description: item.description?.trim() || `Women’s ${category.replace('womens-', '').replaceAll('-', ' ')} from Shopify’s apparel mock catalog.`,
       category,
-      price: Number.isFinite(amount) && amount > 0 ? amount : 60 + (seed % 90),
-      discountPercentage: deterministicDiscount(seed, 12, 27),
-      rating: 4.4 + (seed % 6) / 10,
-      stock: item.variants?.nodes?.[0]?.availableForSale === false ? 0 : deterministicStock(seed),
-      brand: item.vendor?.trim() || 'Elysian Thread',
+      price: amount,
+      stock: availableForSale === false ? 0 : undefined,
+      brand: item.vendor?.trim() || undefined,
       thumbnail: images[0] ?? '',
       images,
       tags: ['women', 'shopify', 'apparel', item.productType ?? 'fashion'].filter(Boolean),
@@ -69,7 +68,6 @@ async function loadMockShop() {
       source: 'mockshop',
       sourceId: item.id || item.handle,
       sourceLabel: 'Shopify mock.shop · Elysian Thread',
-      sizes: sizesForCategory(category),
     }
   }).filter((product): product is Product => Boolean(product))
 }

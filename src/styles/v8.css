@@ -7,4 +7,4 @@
 @media(max-width:680px){html{scroll-behavior:auto}.rail-section{margin-top:42px;margin-bottom:42px}.marketplace-hero{gap:7px}.product-card:hover{transform:none}.category-nav a:after,.mega-trigger>button:after{display:none}.editorial-split{border-radius:8px}.shop-toolbar{backdrop-filter:none}.mobile-dock{box-shadow:0 -8px 30px rgba(35,26,21,.07)}}
 @media(hover:hover){.product-card:hover{transform:translateY(-3px)}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.hero-main>img,.hero-tile>img,.occasion-card>img,.brand-deal-card>img,.category-wall-card>img,.product-card,.product-image,.wish-button,.button,.coupon-card,.category-circle img,.editorial-image img{transition:none!important}.skeleton:after,.product-image-loading:after{animation:none!important}.occasion-section,.brand-deals,.editorial-split,.category-wall,.style-profile-band{animation:none!important}}
-@keyframes v8-shimmer{to{transform:translateX(100%)}}@keyframes v8-reveal{from{opacity:.55;transform:translateY(18px)}to{opacity:1;transform:none}}
+@keyframes v8-shimmer{to{transform:translateX(100%)}}@keyframes v8-reveal{from{transform:translateY(18px)}to{transform:none}}

@@ -1,13 +1,9 @@
 import type { Product } from '../../types'
 import { fetchVaanzariEthnic } from './providers/vaanzari'
 import {
-  deterministicDiscount,
-  deterministicStock,
   fetchProviderJson,
   inferCategory,
   matchesCategoryText,
-  sizesForCategory,
-  stableHash,
   stableNumericId,
   uniqueExternalImages,
 } from './providers/shared'
@@ -43,11 +39,11 @@ function normalize(item: LooseObject, originalQuery:string): Product | null {
   if (!images.length) return null
   const current=pickNumber(item,['lowest_price_usd','price_usd','lowest_price','price','current_price'])
   const retail=pickNumber(item,['retail_price_usd','retail_price','msrp','original_price'])
-  const seed=stableHash(slug)
-  const price=retail || current || 45+(seed%130)
-  const discount=retail && current && retail > current ? Math.round((1-current/retail)*100) : deterministicDiscount(seed,10,34)
+  const price=retail ?? current
+  if (!price) return null
+  const discount=retail && current && retail > current ? Math.round((1-current/retail)*100) : undefined
 
-  return { id:stableNumericId(840000,slug), title, description:`Women’s ${category.replace('womens-','').replaceAll('-',' ')} style discovered for “${originalQuery}”.`, category, price, discountPercentage:Math.max(0,Math.min(75,discount)), rating:4.1+(seed%9)/10, stock:deterministicStock(seed), brand:pickString(item,['brand','brand_name','manufacturer']) || 'Marketplace Edit', sku:pickString(item,['style_code','sku']) || undefined, thumbnail:images[0], images, tags:['women','search',originalQuery], gender:'women', source:'solescout', sourceId:slug, sourceUrl:pickString(item,['url','product_url']) || `https://solescout.ai/search?q=${encodeURIComponent(title)}`, sourceLabel:'SoleScout search network', color:pickString(item,['color','colour']) || undefined, sizes:sizesForCategory(category) }
+  return { id:stableNumericId(840000,slug), title, description:`Women’s ${category.replace('womens-','').replaceAll('-',' ')} style discovered for “${originalQuery}”.`, category, price, discountPercentage:discount, brand:pickString(item,['brand','brand_name','manufacturer']) || undefined, sku:pickString(item,['style_code','sku']) || undefined, thumbnail:images[0], images, tags:['women','search',originalQuery], gender:'women', source:'solescout', sourceId:slug, sourceUrl:pickString(item,['url','product_url']) || `https://solescout.ai/search?q=${encodeURIComponent(title)}`, sourceLabel:'SoleScout search network', color:pickString(item,['color','colour']) || undefined }
 }
 
 export async function fetchSearchExpansion(query:string) {

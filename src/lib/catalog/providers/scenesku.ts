@@ -1,5 +1,5 @@
 import type { Product } from '../../../types'
-import { deterministicDiscount, deterministicStock, fetchProviderJson, inferCategory, sizesForCategory, stableHash, stableNumericId, uniqueExternalImages, type ManagedProvider } from './shared'
+import { fetchProviderJson, inferCategory, stableNumericId, uniqueExternalImages, type ManagedProvider } from './shared'
 
 type SceneImage = {
   image_url?: string
@@ -43,7 +43,7 @@ async function loadSceneSku() {
       const scenes = [...(pack.images ?? [])].sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
       const images = uniqueExternalImages(scenes.map((scene) => scene.image_url || scene.thumbnail_url))
       const parsedPrice = Number(data.price)
-      const seed = stableHash(pack.id || title)
+      if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) return null
       const sizeOptions = data.options?.Size || data.options?.size
 
       return {
@@ -51,11 +51,7 @@ async function loadSceneSku() {
         title,
         description: data.long_description || data.short_description || 'Professional women’s fashion scene pack selected for Veloura.',
         category,
-        price: Number.isFinite(parsedPrice) && parsedPrice > 0 ? parsedPrice : 65,
-        discountPercentage: deterministicDiscount(seed, 10, 24),
-        rating: 4.8 + (seed % 2) / 10,
-        stock: deterministicStock(seed),
-        brand: 'Veloura Studio',
+        price: parsedPrice,
         thumbnail: images[0] ?? '',
         images,
         tags: ['women', 'editorial', 'multi-image', ...(data.tags ?? [])],
@@ -63,7 +59,7 @@ async function loadSceneSku() {
         source: 'scenesku',
         sourceId: pack.id || title,
         sourceLabel: 'SceneSKU multi-scene pack',
-        sizes: sizeOptions?.length ? sizeOptions : sizesForCategory(category),
+        sizes: sizeOptions?.length ? sizeOptions : undefined,
       }
     }).filter((product): product is Product => Boolean(product))
   }))

@@ -1,5 +1,5 @@
 import type { Product } from '../../../types'
-import { deterministicDiscount, deterministicStock, fetchProviderJson, inferCategory, normalizeImageUrl, sizesForCategory, stableHash, stableNumericId, uniqueExternalImages, type ManagedProvider } from './shared'
+import { fetchProviderJson, inferCategory, normalizeImageUrl, stableNumericId, uniqueExternalImages, type ManagedProvider } from './shared'
 
 type LooseObject = Record<string, unknown>
 
@@ -40,6 +40,15 @@ function pickNumber(item: LooseObject, keys: string[]) {
   return undefined
 }
 
+function pickNonNegativeNumber(item: LooseObject, keys: string[]) {
+  for (const key of keys) {
+    const value = item[key]
+    const parsed = typeof value === 'number' ? value : typeof value === 'string' ? Number(value.replace(/[^0-9.]/g, '')) : NaN
+    if (Number.isFinite(parsed) && parsed >= 0) return parsed
+  }
+  return undefined
+}
+
 function normalizeStoreImage(value: unknown) {
   if (typeof value !== 'string' || !value.trim()) return ''
   const clean = value.trim()
@@ -68,18 +77,26 @@ async function loadFreeEStore() {
     const oneImage = normalizeStoreImage(item.image)
     if (oneImage) imageValues.push(oneImage)
     const images = uniqueExternalImages(imageValues)
-    const seed = stableHash(idValue)
+    const currentPrice = pickNumber(item, ['salePrice', 'price'])
+    const retailPrice = pickNumber(item, ['mrp'])
+    const price = retailPrice && currentPrice && retailPrice > currentPrice ? retailPrice : currentPrice ?? retailPrice
+    if (!price) return null
+    const discountPercentage = retailPrice && currentPrice && retailPrice > currentPrice
+      ? Math.round((1 - currentPrice / retailPrice) * 100)
+      : undefined
+    const rating = pickNumber(item, ['rating', 'ratingsAverage'])
+    const stock = pickNonNegativeNumber(item, ['quantity', 'stock'])
 
     return {
       id: stableNumericId(900000, idValue),
       title,
       description: description || 'Women’s fashion product selected for the Veloura marketplace catalog.',
       category,
-      price: pickNumber(item, ['price', 'salePrice', 'mrp']) || 25 + (seed % 90),
-      discountPercentage: deterministicDiscount(seed, 10, 35),
-      rating: pickNumber(item, ['rating', 'ratingsAverage']) || 4 + (seed % 9) / 10,
-      stock: pickNumber(item, ['quantity', 'stock']) || deterministicStock(seed),
-      brand: pickString(item, ['brand', 'brandName']) || rawCategory || 'Free Store Edit',
+      price,
+      discountPercentage,
+      rating,
+      stock,
+      brand: pickString(item, ['brand', 'brandName']) || undefined,
       thumbnail: images[0] ?? '',
       images,
       tags: ['women', rawCategory].filter(Boolean),
@@ -87,7 +104,6 @@ async function loadFreeEStore() {
       source: 'freeestore',
       sourceId: idValue,
       sourceLabel: 'Free E-Store API',
-      sizes: sizesForCategory(category),
     }
   }).filter((product): product is Product => Boolean(product)).slice(0, 140)
 }

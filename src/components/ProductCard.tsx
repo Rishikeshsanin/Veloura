@@ -7,6 +7,7 @@ import { defaultProductSize } from '../lib/sizing'
 import { productImageMode } from '../lib/productIntelligence'
 import { useShop } from '../store/ShopContext'
 import type { Product } from '../types'
+import ResponsiveImage from './ResponsiveImage'
 
 function badgeFor(product: Product) {
   if (product.rating !== undefined && product.rating >= 4.8) return 'TOP RATED'
@@ -27,6 +28,7 @@ export default function ProductCard({ product, compact = false }: { product: Pro
   const [primaryReady, setPrimaryReady] = useState(false)
   const [secondaryFailed, setSecondaryFailed] = useState(false)
   const [secondaryReady, setSecondaryReady] = useState(false)
+  const [secondaryRequested, setSecondaryRequested] = useState(false)
   const badge = badgeFor(product)
   const imageMode = productImageMode(product)
   const productHref = `/product/${product.id}?category=${encodeURIComponent(product.category)}`
@@ -37,6 +39,7 @@ export default function ProductCard({ product, compact = false }: { product: Pro
     setPrimaryReady(false)
     setSecondaryFailed(false)
     setSecondaryReady(false)
+    setSecondaryRequested(false)
   }, [product.id])
 
   const primaryImage = imageCandidates[imageIndex]
@@ -44,7 +47,7 @@ export default function ProductCard({ product, compact = false }: { product: Pro
 
   const prefetchDetail = () => {
     void import('../pages/ProductPage')
-    if (secondaryImage && typeof window !== 'undefined') { const preload = new Image(); preload.src = secondaryImage }
+    if (secondaryImage) setSecondaryRequested(true)
   }
 
   const primaryFailed = () => {
@@ -56,11 +59,11 @@ export default function ProductCard({ product, compact = false }: { product: Pro
 
   return <article className={`product-card ${compact ? 'compact' : ''} image-mode-${imageMode}`} data-category={product.category} onMouseEnter={prefetchDetail} onFocus={prefetchDetail}>
     <div className="product-media">
-      <Link className="product-image-link" to={productHref} aria-label={product.title}>
+      <Link className="product-image-link" to={productHref}>
         {primaryImage ? <>
           <div className={`product-image-loading ${primaryReady ? 'hidden' : ''}`} aria-hidden="true"><strong>V</strong><span>VELOURA</span></div>
-          <img className={`product-image primary-image ${primaryReady ? 'primary-ready' : ''} ${secondaryReady ? 'has-secondary' : ''}`} src={primaryImage} alt={product.title} loading="lazy" decoding="async" onLoad={() => setPrimaryReady(true)} onError={primaryFailed} />
-          {secondaryImage && !secondaryFailed && <img className={`product-image secondary-image ${secondaryReady ? 'ready' : ''}`} src={secondaryImage} alt="" loading="lazy" decoding="async" onLoad={() => setSecondaryReady(true)} onError={() => { setSecondaryFailed(true); setSecondaryReady(false) }} />}
+          <ResponsiveImage className={`product-image primary-image ${primaryReady ? 'primary-ready' : ''} ${secondaryReady ? 'has-secondary' : ''}`} src={primaryImage} sizes="(max-width: 680px) 56vw, (max-width: 1100px) 32vw, 260px" alt={product.title} loading="lazy" decoding="async" onLoad={() => setPrimaryReady(true)} onError={primaryFailed} />
+          {secondaryImage && secondaryRequested && !secondaryFailed && <ResponsiveImage className={`product-image secondary-image ${secondaryReady ? 'ready' : ''}`} src={secondaryImage} sizes="(max-width: 680px) 56vw, (max-width: 1100px) 32vw, 260px" alt="" loading="lazy" decoding="async" onLoad={() => setSecondaryReady(true)} onError={() => { setSecondaryFailed(true); setSecondaryReady(false) }} />}
         </> : <div className="product-image-fallback"><ImageOff size={26} /><strong>VELOURA</strong><span>{categoryLabel(product.category)}</span></div>}
       </Link>
       <div className="product-badges">{badge && <span className="product-badge">{badge}</span>}{discount >= 30 && <span className="sale-pill">{discount}% OFF</span>}</div>
@@ -68,7 +71,7 @@ export default function ProductCard({ product, compact = false }: { product: Pro
       <div className="product-card-actions"><button className="quick-view" onClick={() => openQuickView(product)}><Eye size={15}/> Quick view</button><button className="quick-add" disabled={soldOut} onClick={() => !soldOut && addToCart(product, defaultProductSize(product))}>{soldOut ? 'Sold out' : <><Plus size={15} /> Add</>}</button></div>
     </div>
     <div className="product-copy">
-      <div className="product-brand-row">{product.brand ? <Link className="product-brand brand-link" to={`/brand/${encodeURIComponent(product.brand)}`}>{product.brand}</Link> : <strong className="product-brand">Veloura Edit</strong>}{product.rating !== undefined && <span className="rating"><Star size={12} fill="currentColor" /> {product.rating.toFixed(1)}</span>}</div>
+      <div className="product-brand-row">{product.brand ? <Link className="product-brand brand-link" to={`/brand/${encodeURIComponent(product.brand)}`}>{product.brand}</Link> : <strong className="product-brand">Veloura selection</strong>}{product.rating !== undefined && <span className="rating"><Star size={12} fill="currentColor" /> {product.rating.toFixed(1)}</span>}</div>
       <Link className="product-title" to={productHref}>{product.title}</Link>
       <div className="price-line"><strong>{formatINR(selling)}</strong>{discount > 0 && <><s>{formatINR(mrp)}</s><span>({discount}% off)</span></>}</div>
       {soldOut ? <p className="stock-note sold-out">Out of stock</p> : product.stock !== undefined && product.stock <= 15 && <p className="stock-note">Only a few left</p>}

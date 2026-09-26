@@ -1,9 +1,13 @@
-import { fetchManagedCatalog, fetchManagedCategory, fetchManagedProduct, searchManagedCatalog } from './catalog/manager'
+import { fetchManagedCatalog, fetchManagedCategory, fetchManagedHomeCatalog, fetchManagedProduct, searchManagedCatalog } from './catalog/manager'
 import { fetchSearchExpansion } from './catalog/searchExpansion'
 import { expandSearchQueries, productSearchScore, rankCatalogSearch } from './searchIntelligence'
 
 export function fetchCatalog() {
   return fetchManagedCatalog()
+}
+
+export function fetchHomeCatalog() {
+  return fetchManagedHomeCatalog()
 }
 
 export function fetchCategoryCatalog(category: string) {
