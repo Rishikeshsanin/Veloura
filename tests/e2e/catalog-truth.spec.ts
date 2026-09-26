@@ -6,8 +6,10 @@ const truthProducts=[
 ]
 
 test('unknown product facts stay absent while explicit zero stock remains sold out', async ({page}) => {
-  await page.goto('/')
-  await page.evaluate((items)=>localStorage.setItem('veloura_wishlist',JSON.stringify(items)),truthProducts)
+  await page.addInitScript((items)=>{
+    localStorage.setItem('veloura_state_owner_v2','guest')
+    localStorage.setItem('veloura_wishlist',JSON.stringify(items))
+  },truthProducts)
   await page.goto('/wishlist')
 
   const unknown=page.locator('.product-card').filter({hasText:'Unknown Facts Dress'})
