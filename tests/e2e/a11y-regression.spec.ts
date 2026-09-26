@@ -54,8 +54,11 @@ async function openMockPdp(page: import('@playwright/test').Page) {
   await page.goto('/shop?category=womens-ethnicwear')
   const productLink=page.getByRole('link',{name:mockCatalogProductTitle}).last()
   await expect(productLink).toBeVisible()
-  await productLink.click()
-  await expect(page.getByRole('heading',{level:1,name:mockCatalogProductTitle})).toBeVisible()
+  await Promise.all([
+    page.waitForURL(/\/product\//,{timeout:20_000}),
+    productLink.click(),
+  ])
+  await expect(page.getByRole('heading',{level:1,name:mockCatalogProductTitle})).toBeVisible({timeout:20_000})
 }
 
 test('confirmed Home accessibility regressions stay fixed', async ({page}) => {
