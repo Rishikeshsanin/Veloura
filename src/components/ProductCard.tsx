@@ -71,7 +71,7 @@ export default function ProductCard({ product, compact = false }: { product: Pro
       <div className="product-card-actions"><button className="quick-view" onClick={() => openQuickView(product)}><Eye size={15}/> Quick view</button><button className="quick-add" disabled={soldOut} onClick={() => !soldOut && addToCart(product, defaultProductSize(product))}>{soldOut ? 'Sold out' : <><Plus size={15} /> Add</>}</button></div>
     </div>
     <div className="product-copy">
-      <div className="product-brand-row">{product.brand ? <Link className="product-brand brand-link" to={`/brand/${encodeURIComponent(product.brand)}`}>{product.brand}</Link> : <strong className="product-brand">Veloura Edit</strong>}{product.rating !== undefined && <span className="rating"><Star size={12} fill="currentColor" /> {product.rating.toFixed(1)}</span>}</div>
+      <div className="product-brand-row">{product.brand ? <Link className="product-brand brand-link" to={`/brand/${encodeURIComponent(product.brand)}`}>{product.brand}</Link> : <strong className="product-brand">Veloura selection</strong>}{product.rating !== undefined && <span className="rating"><Star size={12} fill="currentColor" /> {product.rating.toFixed(1)}</span>}</div>
       <Link className="product-title" to={productHref}>{product.title}</Link>
       <div className="price-line"><strong>{formatINR(selling)}</strong>{discount > 0 && <><s>{formatINR(mrp)}</s><span>({discount}% off)</span></>}</div>
       {soldOut ? <p className="stock-note sold-out">Out of stock</p> : product.stock !== undefined && product.stock <= 15 && <p className="stock-note">Only a few left</p>}
