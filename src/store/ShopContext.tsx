@@ -70,33 +70,105 @@ function read<T>(key: string, fallback: T): T {
   }
 }
 
+const STORAGE_OWNER_KEY = 'veloura_state_owner_v2'
+const GUEST_OWNER = 'guest'
+const STORAGE_KEYS = {
+  cart: 'veloura_cart',
+  wishlist: 'veloura_wishlist',
+  recent: 'veloura_recent',
+  saved: 'veloura_saved_for_later_v1',
+  addresses: 'veloura_addresses_v1',
+  orders: 'veloura_orders_v1',
+  coupon: 'veloura_coupon_v1',
+  preferences: 'veloura_preferences_v1',
+} as const
+
+type LocalCommerceSnapshot = {
+  cart: CartItem[]
+  savedForLater: CartItem[]
+  wishlist: Product[]
+  addresses: Address[]
+  orders: Order[]
+  recentlyViewed: Product[]
+  preferenceSignals: PreferenceSignals
+}
+
+function emptySignals(): PreferenceSignals {
+  return { categories: {}, brands: {}, colors: {}, occasions: {} }
+}
+
+function emptyLocalSnapshot(): LocalCommerceSnapshot {
+  return { cart: [], savedForLater: [], wishlist: [], addresses: [], orders: [], recentlyViewed: [], preferenceSignals: emptySignals() }
+}
+
+function readStorageOwner() {
+  try { return localStorage.getItem(STORAGE_OWNER_KEY) } catch { return null }
+}
+
+function writeStorageOwner(owner: string) {
+  try { localStorage.setItem(STORAGE_OWNER_KEY, owner) } catch { /* browser storage unavailable */ }
+}
+
+function readGuestInitial<T>(key: string, fallback: T, sensitive = false): T {
+  const owner = readStorageOwner()
+  if (owner === GUEST_OWNER) return read(key, fallback)
+  if (owner === null && !sensitive) return read(key, fallback)
+  return fallback
+}
+
+function readLocalSnapshot(): LocalCommerceSnapshot {
+  return {
+    cart: read<CartItem[]>(STORAGE_KEYS.cart, []),
+    savedForLater: read<CartItem[]>(STORAGE_KEYS.saved, []),
+    wishlist: read<Product[]>(STORAGE_KEYS.wishlist, []),
+    addresses: read<Address[]>(STORAGE_KEYS.addresses, []),
+    orders: read<Order[]>(STORAGE_KEYS.orders, []),
+    recentlyViewed: read<Product[]>(STORAGE_KEYS.recent, []),
+    preferenceSignals: read<PreferenceSignals>(STORAGE_KEYS.preferences, emptySignals()),
+  }
+}
+
+function guestIntentOnly(snapshot: LocalCommerceSnapshot): LocalCommerceSnapshot {
+  return {
+    ...snapshot,
+    addresses: [],
+    orders: [],
+  }
+}
+
+function clearCommerceStorage() {
+  try {
+    Object.values(STORAGE_KEYS).forEach((key) => localStorage.removeItem(key))
+  } catch { /* browser storage unavailable */ }
+}
+
 export function ShopProvider({ children }: { children: ReactNode }) {
   const { user, loading: authLoading } = useAuth()
-  const [cart, setCart] = useState<CartItem[]>(() => read('veloura_cart', []))
-  const [wishlist, setWishlist] = useState<Product[]>(() => read('veloura_wishlist', []))
+  const [cart, setCart] = useState<CartItem[]>(() => readGuestInitial(STORAGE_KEYS.cart, []))
+  const [wishlist, setWishlist] = useState<Product[]>(() => readGuestInitial(STORAGE_KEYS.wishlist, []))
   const [compare, setCompare] = useState<Product[]>(() => read('veloura_compare_v1', []))
-  const [recentlyViewed, setRecentlyViewed] = useState<Product[]>(() => read('veloura_recent', []))
-  const [savedForLater, setSavedForLater] = useState<CartItem[]>(() => read('veloura_saved_for_later_v1', []))
-  const [addresses, setAddresses] = useState<Address[]>(() => read('veloura_addresses_v1', []))
-  const [orders, setOrders] = useState<Order[]>(() => read('veloura_orders_v1', []))
-  const [couponCode, setCouponCode] = useState<string>(() => read('veloura_coupon_v1', ''))
+  const [recentlyViewed, setRecentlyViewed] = useState<Product[]>(() => readGuestInitial(STORAGE_KEYS.recent, []))
+  const [savedForLater, setSavedForLater] = useState<CartItem[]>(() => readGuestInitial(STORAGE_KEYS.saved, []))
+  const [addresses, setAddresses] = useState<Address[]>(() => readGuestInitial(STORAGE_KEYS.addresses, [], true))
+  const [orders, setOrders] = useState<Order[]>(() => readGuestInitial(STORAGE_KEYS.orders, [], true))
+  const [couponCode, setCouponCode] = useState<string>(() => readGuestInitial(STORAGE_KEYS.coupon, ''))
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null)
-  const [preferenceSignals, setPreferenceSignals] = useState<PreferenceSignals>(() => read('veloura_preferences_v1', EMPTY_PREFERENCE_SIGNALS))
+  const [preferenceSignals, setPreferenceSignals] = useState<PreferenceSignals>(() => readGuestInitial(STORAGE_KEYS.preferences, EMPTY_PREFERENCE_SIGNALS))
   const [actionToast, setActionToast] = useState('')
   const [cloudStatus, setCloudStatus] = useState<'local'|'syncing'|'synced'|'error'>('local')
+  const [storageReady, setStorageReady] = useState(false)
   const hydratedUserRef = useRef<string | null>(null)
-  const hadAuthenticatedUserRef = useRef(false)
   const cloudBlockedRef = useRef(false)
 
-  useEffect(() => localStorage.setItem('veloura_cart', JSON.stringify(cart)), [cart])
-  useEffect(() => localStorage.setItem('veloura_wishlist', JSON.stringify(wishlist)), [wishlist])
+  useEffect(() => { if (storageReady) localStorage.setItem(STORAGE_KEYS.cart, JSON.stringify(cart)) }, [storageReady, cart])
+  useEffect(() => { if (storageReady) localStorage.setItem(STORAGE_KEYS.wishlist, JSON.stringify(wishlist)) }, [storageReady, wishlist])
   useEffect(() => localStorage.setItem('veloura_compare_v1', JSON.stringify(compare)), [compare])
-  useEffect(() => localStorage.setItem('veloura_recent', JSON.stringify(recentlyViewed)), [recentlyViewed])
-  useEffect(() => localStorage.setItem('veloura_preferences_v1', JSON.stringify(preferenceSignals)), [preferenceSignals])
-  useEffect(() => localStorage.setItem('veloura_saved_for_later_v1', JSON.stringify(savedForLater)), [savedForLater])
-  useEffect(() => localStorage.setItem('veloura_addresses_v1', JSON.stringify(addresses)), [addresses])
-  useEffect(() => localStorage.setItem('veloura_orders_v1', JSON.stringify(orders)), [orders])
-  useEffect(() => localStorage.setItem('veloura_coupon_v1', JSON.stringify(couponCode)), [couponCode])
+  useEffect(() => { if (storageReady) localStorage.setItem(STORAGE_KEYS.recent, JSON.stringify(recentlyViewed)) }, [storageReady, recentlyViewed])
+  useEffect(() => { if (storageReady) localStorage.setItem(STORAGE_KEYS.preferences, JSON.stringify(preferenceSignals)) }, [storageReady, preferenceSignals])
+  useEffect(() => { if (storageReady) localStorage.setItem(STORAGE_KEYS.saved, JSON.stringify(savedForLater)) }, [storageReady, savedForLater])
+  useEffect(() => { if (storageReady) localStorage.setItem(STORAGE_KEYS.addresses, JSON.stringify(addresses)) }, [storageReady, addresses])
+  useEffect(() => { if (storageReady) localStorage.setItem(STORAGE_KEYS.orders, JSON.stringify(orders)) }, [storageReady, orders])
+  useEffect(() => { if (storageReady) localStorage.setItem(STORAGE_KEYS.coupon, JSON.stringify(couponCode)) }, [storageReady, couponCode])
   useEffect(() => {
     if (!actionToast) return
     const timer = window.setTimeout(() => setActionToast(''), 2200)
@@ -106,51 +178,85 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (authLoading) return
 
+    let cancelled = false
+    const owner = readStorageOwner()
+    const persisted = readLocalSnapshot()
+    const persistedCoupon = read<string>(STORAGE_KEYS.coupon, '')
+
+    const applySnapshot = (snapshot: LocalCommerceSnapshot) => {
+      setCart(snapshot.cart)
+      setSavedForLater(snapshot.savedForLater)
+      setWishlist(snapshot.wishlist)
+      setAddresses(snapshot.addresses)
+      setOrders(snapshot.orders)
+      setRecentlyViewed(snapshot.recentlyViewed)
+      setPreferenceSignals(snapshot.preferenceSignals)
+    }
+
     if (!user) {
-      if (hadAuthenticatedUserRef.current) {
-        setCart([])
-        setWishlist([])
-        setRecentlyViewed([])
-        setSavedForLater([])
-        setAddresses([])
-        setOrders([])
-        setPreferenceSignals({ categories: {}, brands: {}, colors: {}, occasions: {} })
-        setCouponCode('')
+      const safeGuest = owner === GUEST_OWNER ? persisted : guestIntentOnly(persisted)
+      if (owner && owner !== GUEST_OWNER) clearCommerceStorage()
+      if (owner === null) {
+        try {
+          localStorage.removeItem(STORAGE_KEYS.addresses)
+          localStorage.removeItem(STORAGE_KEYS.orders)
+        } catch { /* browser storage unavailable */ }
       }
+      applySnapshot(owner && owner !== GUEST_OWNER ? emptyLocalSnapshot() : safeGuest)
+      setCouponCode(owner && owner !== GUEST_OWNER ? '' : persistedCoupon)
+      writeStorageOwner(GUEST_OWNER)
       hydratedUserRef.current = null
       cloudBlockedRef.current = false
       setCloudStatus('local')
+      setStorageReady(true)
       return
     }
 
-    hadAuthenticatedUserRef.current = true
-    if (hydratedUserRef.current === user.id) return
-
-    let cancelled = false
+    setStorageReady(false)
     setCloudStatus('syncing')
-    const localState = { cart, savedForLater, wishlist, addresses, orders, recentlyViewed, preferenceSignals }
+
+    let localState: LocalCommerceSnapshot
+    let localCoupon = ''
+    if (owner === user.id) {
+      localState = persisted
+      localCoupon = persistedCoupon
+    } else if (owner === GUEST_OWNER || owner === null) {
+      localState = guestIntentOnly(persisted)
+      localCoupon = persistedCoupon
+    } else {
+      clearCommerceStorage()
+      localState = emptyLocalSnapshot()
+    }
+
+    writeStorageOwner(user.id)
+    applySnapshot(localState)
+    setCouponCode(localCoupon)
 
     loadCloudCommerce(user.id).then(async (cloud) => {
       if (cancelled) return
       const merged = mergeCommerceState(localState, cloud)
       hydratedUserRef.current = user.id
       cloudBlockedRef.current = false
-      setCart(merged.cart)
-      setSavedForLater(merged.savedForLater)
-      setWishlist(merged.wishlist)
-      setAddresses(merged.addresses)
-      setOrders(merged.orders)
-      setRecentlyViewed(merged.recentlyViewed)
-      setPreferenceSignals(merged.preferenceSignals)
-      await pushCloudCommerce(user.id, merged, {
-        email: user.email,
-        displayName: String(user.user_metadata?.display_name || user.user_metadata?.full_name || ''),
-      })
-      if (!cancelled) setCloudStatus('synced')
+      applySnapshot(merged)
+      setStorageReady(true)
+      try {
+        await pushCloudCommerce(user.id, merged, {
+          email: user.email,
+          displayName: String(user.user_metadata?.display_name || user.user_metadata?.full_name || ''),
+        })
+        if (!cancelled) setCloudStatus('synced')
+      } catch {
+        if (!cancelled) {
+          cloudBlockedRef.current = true
+          setCloudStatus('error')
+        }
+      }
     }).catch(() => {
       if (cancelled) return
       hydratedUserRef.current = user.id
       cloudBlockedRef.current = true
+      applySnapshot(localState)
+      setStorageReady(true)
       setCloudStatus('error')
     })
 
@@ -340,7 +446,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const syncNow = useCallback(async () => {
-    if (!user) return
+    if (!user || hydratedUserRef.current !== user.id) return
     setCloudStatus('syncing')
     try {
       await pushCloudCommerce(user.id, {
@@ -358,13 +464,13 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   }, [user, cart, savedForLater, wishlist, addresses, orders, recentlyViewed, preferenceSignals])
 
   useEffect(() => {
-    if (!user || hydratedUserRef.current !== user.id || cloudBlockedRef.current) return
+    if (!storageReady || !user || hydratedUserRef.current !== user.id || cloudBlockedRef.current) return
     setCloudStatus('syncing')
     const timer = window.setTimeout(() => {
       syncNow().catch(() => undefined)
     }, 700)
     return () => window.clearTimeout(timer)
-  }, [user?.id, cart, savedForLater, wishlist, addresses, orders, recentlyViewed, preferenceSignals, syncNow])
+  }, [storageReady, user?.id, cart, savedForLater, wishlist, addresses, orders, recentlyViewed, preferenceSignals, syncNow])
 
   const value = useMemo(() => ({
     cart, wishlist, compare, recentlyViewed, savedForLater, addresses, orders, quickViewProduct, preferenceSignals, actionToast, coupon,
