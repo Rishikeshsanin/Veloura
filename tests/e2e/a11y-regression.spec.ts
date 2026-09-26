@@ -145,7 +145,7 @@ test('compare enforces the four-product maximum', async ({page}) => {
 test('broken product imagery falls back without a page error', async ({page}) => {
   const pageErrors:string[]=[]
   page.on('pageerror',(error)=>pageErrors.push(error.message))
-  await page.route('https://broken.veloura.invalid/**',(route)=>route.abort())
+  await page.route('https://broken.veloura.invalid/**',(route)=>route.fulfill({status:404,contentType:'image/jpeg',body:''}))
   await page.addInitScript((product)=>localStorage.setItem('veloura_wishlist',JSON.stringify([product])),brokenWishlistProduct)
   await page.goto('/wishlist')
   const card=page.locator('.product-card').filter({hasText:'Broken Image Test'})
