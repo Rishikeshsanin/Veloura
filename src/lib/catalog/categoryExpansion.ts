@@ -2,12 +2,8 @@ import type { Product } from '../../types'
 import { fetchMockShopCategory } from './providers/mockShopNetwork'
 import { fetchVaanzariEthnic } from './providers/vaanzari'
 import {
-  deterministicDiscount,
-  deterministicStock,
   fetchProviderJson,
   matchesCategoryText,
-  sizesForCategory,
-  stableHash,
   stableNumericId,
   uniqueExternalImages,
   runWithConcurrency,
@@ -77,11 +73,11 @@ function normalizeSoleScout(item: LooseObject, category: string): Product | null
   if (!images.length) return null
   const current = pickNumber(item, ['lowest_price_usd','price_usd','lowest_price','price','current_price'])
   const retail = pickNumber(item, ['retail_price_usd','retail_price','msrp','original_price'])
-  const seed = stableHash(slug)
-  const price = retail || current || 40 + (seed % 130)
-  const discount = retail && current && retail > current ? Math.round((1 - current / retail) * 100) : deterministicDiscount(seed, 10, 34)
+  const price = retail ?? current
+  if (!price) return null
+  const discount = retail && current && retail > current ? Math.round((1 - current / retail) * 100) : undefined
 
-  return { id: stableNumericId(810000,slug), title, description:`Women’s ${category.replace('womens-','').replaceAll('-',' ')} style discovered across the Veloura marketplace network.`, category, price, discountPercentage:Math.max(0,Math.min(75,discount)), rating:4.1+(seed%9)/10, stock:deterministicStock(seed), brand:pickString(item,['brand','brand_name','manufacturer']) || 'Marketplace Edit', sku:pickString(item,['style_code','sku']) || undefined, thumbnail:images[0], images, tags:['women','marketplace',category.replace('womens-','')], gender:'women', source:'solescout', sourceId:slug, sourceUrl:pickString(item,['url','product_url']) || `https://solescout.ai/search?q=${encodeURIComponent(title)}`, sourceLabel:'SoleScout deep catalog', color:pickString(item,['color','colour']) || undefined, sizes:sizesForCategory(category) }
+  return { id: stableNumericId(810000,slug), title, description:`Women’s ${category.replace('womens-','').replaceAll('-',' ')} style discovered across the Veloura marketplace network.`, category, price, discountPercentage:discount, brand:pickString(item,['brand','brand_name','manufacturer']) || undefined, sku:pickString(item,['style_code','sku']) || undefined, thumbnail:images[0], images, tags:['women','marketplace',category.replace('womens-','')], gender:'women', source:'solescout', sourceId:slug, sourceUrl:pickString(item,['url','product_url']) || `https://solescout.ai/search?q=${encodeURIComponent(title)}`, sourceLabel:'SoleScout deep catalog', color:pickString(item,['color','colour']) || undefined }
 }
 
 async function loadSoleScoutBatch(terms:string[], pages:number[], category:string) {
@@ -130,14 +126,10 @@ async function loadBeautyBatch(terms:string[], pages:number[], category:string) 
 }
 
 async function loadBeautyCategory(category:string) {
-  const terms = BEAUTY_TERMS[category] ?? []
-  if (!terms.length) return []
-  const firstPass = await loadBeautyBatch(terms,[1],category)
-  if (firstPass.length >= EARLY_EXIT_TARGET) return firstPass
-  const secondPass = await loadBeautyBatch(terms,[2],category)
-  const combined=[...firstPass,...secondPass]
-  if (combined.length >= EARLY_EXIT_TARGET) return combined
-  return [...combined,...await loadBeautyBatch(terms,[3],category)]
+  if (!(category in BEAUTY_TERMS)) return []
+  // Open Beauty Facts does not provide trustworthy retail pricing in this feed.
+  // Do not surface those records as shoppable products with invented prices.
+  return []
 }
 
 function dedupe(products:Product[]) {
