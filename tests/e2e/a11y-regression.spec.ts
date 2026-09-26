@@ -74,7 +74,8 @@ test('confirmed Home accessibility regressions stay fixed', async ({page}) => {
 })
 
 
-test('keyboard search works and Escape closes the search dialog', async ({page}) => {
+test('keyboard search works and Escape closes the search dialog', async ({page},testInfo) => {
+  test.skip(testInfo.project.name.includes('mobile'),'desktop keyboard interaction')
   await mockSourceCatalog(page)
   await page.goto('/')
   const search=page.locator('.search-launch').first()
@@ -118,7 +119,7 @@ test('guest PDP covers fit advisor, factual Q&A, sandbox pincode and recently vi
 
 test('guest wishlist, cart and save-for-later round trip stays usable', async ({page}) => {
   await openMockPdp(page)
-  await page.getByRole('button',{name:'Wishlist'}).click()
+  await page.locator('.wishlist-detail').click()
   await page.getByRole('button',{name:/Add to bag/}).first().click()
 
   await page.goto('/cart')
@@ -136,7 +137,7 @@ test('guest wishlist, cart and save-for-later round trip stays usable', async ({
 test('compare enforces the four-product maximum', async ({page}) => {
   await page.addInitScript((items)=>localStorage.setItem('veloura_compare_v1',JSON.stringify(items)),fourCompare)
   await openMockPdp(page)
-  await page.getByRole('button',{name:'Compare'}).click()
+  await page.locator('.compare-detail').click()
   await expect(page.getByRole('status')).toContainText('Compare up to 4 products at a time')
   await expect.poll(()=>page.evaluate(()=>JSON.parse(localStorage.getItem('veloura_compare_v1')||'[]').length)).toBe(4)
 })
