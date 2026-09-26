@@ -41,9 +41,8 @@ test('mobile dock remains usable on phone viewport', async ({page},testInfo) => 
 
 test('compare tray stays above the mobile bottom dock', async ({page},testInfo) => {
   test.skip(!testInfo.project.name.includes('mobile'),'mobile-only check')
+  await page.addInitScript((items)=>localStorage.setItem('veloura_compare_v1',JSON.stringify(items)),mockCompare)
   await page.goto('/')
-  await page.evaluate((items)=>localStorage.setItem('veloura_compare_v1',JSON.stringify(items)),mockCompare)
-  await page.reload()
   const tray=page.locator('.compare-tray')
   const dock=page.locator('.mobile-dock')
   await expect(tray).toBeVisible()
