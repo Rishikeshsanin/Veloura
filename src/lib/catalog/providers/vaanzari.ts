@@ -1,9 +1,6 @@
 import type { Product } from '../../../types'
 import {
-  deterministicDiscount,
-  deterministicStock,
   fetchProviderJson,
-  stableHash,
   stableNumericId,
   uniqueExternalImages,
   type ManagedProvider,
@@ -77,18 +74,15 @@ function normalize(item: LooseObject): Product | null {
   const technique = pickString(item, ['technique','weave','weaving_method'])
   const color = pickString(item, ['color','colour','primary_color'])
   const occasion = pickString(item, ['occasion','occasion_name'])
-  const seed = stableHash(idValue)
   const directPrice = pickNumber(item, ['price','price_inr','selling_price','sale_price','amount'])
+  if (!directPrice) return null
 
   return {
     id: stableNumericId(930000, idValue),
     title,
     description: description || [material, technique, color].filter(Boolean).join(' · ') || 'A Banarasi saree from Vaanzari’s public catalogue.',
     category: 'womens-ethnicwear',
-    price: directPrice && directPrice >= 500 ? directPrice : directPrice || 45 + (seed % 180),
-    discountPercentage: deterministicDiscount(seed, 8, 25),
-    rating: 4.5 + (seed % 5) / 10,
-    stock: deterministicStock(seed),
+    price: directPrice,
     brand: 'Vaanzari',
     thumbnail: images[0],
     images,
@@ -100,7 +94,6 @@ function normalize(item: LooseObject): Product | null {
     sourceLabel: 'Vaanzari public saree catalogue',
     color: color || undefined,
     occasion: occasion || undefined,
-    sizes: ['One Size'],
   }
 }
 
