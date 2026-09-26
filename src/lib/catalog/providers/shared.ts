@@ -99,21 +99,6 @@ export function stableNumericId(base: number, value: string | number) {
   return base + (stableHash(String(value)) % 99999)
 }
 
-export function deterministicDiscount(seed: number, min = 12, spread = 32) {
-  return min + ((Math.abs(seed) * 11) % spread)
-}
-
-export function deterministicStock(seed: number) {
-  return 7 + ((Math.abs(seed) * 17) % 46)
-}
-
-export function sizesForCategory(category: string) {
-  if (category === 'womens-shoes') return ['36', '37', '38', '39', '40', '41']
-  if (['womens-bags','womens-jewellery','womens-beauty','womens-skincare','womens-haircare','womens-fragrance','womens-watches','womens-sunglasses','womens-accessories'].includes(category)) return ['One Size']
-  if (category === 'womens-lingerie') return ['XS', 'S', 'M', 'L', 'XL', 'XXL']
-  return ['XS', 'S', 'M', 'L', 'XL']
-}
-
 type CategoryRule = { include: RegExp; exclude?: RegExp }
 
 const CATEGORY_RULES: Record<string, CategoryRule> = {
