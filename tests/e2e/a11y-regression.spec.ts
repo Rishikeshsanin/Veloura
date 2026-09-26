@@ -54,7 +54,9 @@ async function openMockPdp(page: import('@playwright/test').Page) {
   await page.goto('/shop?category=womens-ethnicwear')
   const productLink=page.getByRole('link',{name:mockCatalogProductTitle}).last()
   await expect(productLink).toBeVisible()
-  await productLink.click()
+  const productHref=await productLink.getAttribute('href')
+  expect(productHref).toMatch(/^\/product\//)
+  await page.goto(productHref!)
   await expect(page).toHaveURL(/\/product\//,{timeout:20_000})
   await expect(page.getByRole('heading',{level:1,name:mockCatalogProductTitle})).toBeVisible({timeout:20_000})
 }
