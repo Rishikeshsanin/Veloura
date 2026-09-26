@@ -7,7 +7,7 @@ import { catalogProviders, isUsableImage, normalizeImageUrl } from './providers'
 import { matchesCategoryText, type ManagedProvider } from './providers/shared'
 
 const ALLOWED_CATEGORIES = new Set(WOMEN_CATEGORIES.map((category) => category.value))
-const CACHE_KEY = 'veloura:catalog:v12'
+const CACHE_KEY = 'veloura:catalog:v14-truth'
 const CACHE_TTL = 15 * 60 * 1000
 const CATEGORY_LIMIT = 240
 const CATEGORY_CACHE_TTL = 30 * 60 * 1000
@@ -52,8 +52,15 @@ function sanitizeProduct(product:Product):Product|null {
     if (!matchesCategoryText(product.category,evidence)) return null
   }
   const images=Array.from(new Set([...(product.images??[]),product.thumbnail].map(normalizeImageUrl).filter(isUsableImage)))
-  if (!images.length || !product.title?.trim()) return null
-  return {...product,title:product.title.trim(),description:product.description?.trim()||'Selected for the Veloura women’s edit.',thumbnail:images[0],images,rating:Math.max(3.8,Math.min(5,product.rating??4.4)),stock:Math.max(0,product.stock??18)}
+  const price=Number(product.price)
+  if (!images.length || !product.title?.trim() || !Number.isFinite(price) || price <= 0) return null
+  const rating=typeof product.rating === 'number' && Number.isFinite(product.rating) ? Math.max(0,Math.min(5,product.rating)) : undefined
+  const stock=typeof product.stock === 'number' && Number.isFinite(product.stock) ? Math.max(0,Math.floor(product.stock)) : undefined
+  const discountPercentage=typeof product.discountPercentage === 'number' && Number.isFinite(product.discountPercentage)
+    ? Math.max(0,Math.min(100,product.discountPercentage))
+    : undefined
+  const sizes=product.sizes?.map((size)=>size.trim()).filter(Boolean)
+  return {...product,title:product.title.trim(),description:product.description?.trim()||'Selected for the Veloura women’s edit.',price,thumbnail:images[0],images,rating,stock,discountPercentage,sizes:sizes?.length?Array.from(new Set(sizes)):undefined}
 }
 
 function dedupeAndBalance(input:Product[]) {
