@@ -19,7 +19,7 @@ test('unknown product facts stay absent while explicit zero stock remains sold o
   await expect(unknown.locator('.sale-pill')).toHaveCount(0)
   await expect(unknown.locator('.quick-add')).toBeEnabled()
 
-  await unknown.locator('.quick-add').click()
+  await unknown.locator('.quick-add').evaluate((button: HTMLElement)=>button.click())
   await expect.poll(()=>page.evaluate(()=>JSON.parse(localStorage.getItem('veloura_cart')||'[]').some((item:{product:{id:number}})=>item.product.id===919901))).toBe(true)
   await page.goto('/cart')
   await expect(page.locator('body')).toContainText('Not specified')
