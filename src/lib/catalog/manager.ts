@@ -1,5 +1,4 @@
 import { WOMEN_CATEGORIES } from '../../data/catalog'
-import { fallbackProducts } from '../../data/fallback'
 import type { Product } from '../../types'
 import { fetchCategoryExpansion, clearCategoryExpansionCache } from './categoryExpansion'
 import { externalCatalogProviders } from './externalProviders'
@@ -112,9 +111,7 @@ export async function fetchManagedCatalog(forceRefresh=false):Promise<Product[]>
   pendingCatalog=(async()=>{
     providerHealth=[]
     const providerResults=await Promise.all(allProviders.map(loadProvider))
-    providerHealth.push({id:'curated',label:'Veloura curated reserve',status:'ready',count:fallbackProducts.length,durationMs:0})
-    const catalog=dedupeAndBalance([...providerResults.flat(),...fallbackProducts])
-    const finalCatalog=catalog.length>=18?catalog:dedupeAndBalance([...fallbackProducts,...providerResults.flat()])
+    const finalCatalog=dedupeAndBalance(providerResults.flat())
     catalogCache=finalCatalog; writeSessionCache(finalCatalog)
     if (import.meta.env.DEV) { console.table(providerHealth.map(({id,status,count,durationMs,message})=>({id,status,count,durationMs,message}))); console.info(`[Veloura Catalog] ${finalCatalog.length} unique women’s products after quality gates and image dedupe.`) }
     return finalCatalog
@@ -131,7 +128,7 @@ export async function fetchManagedHomeCatalog():Promise<Product[]> {
 
   pendingHomeCatalog=(async()=>{
     const providerResults=await Promise.all(homeProviders.map(loadProviderQuiet))
-    const catalog=dedupeAndBalance([...providerResults.flat(),...fallbackProducts])
+    const catalog=dedupeAndBalance(providerResults.flat())
     homeCatalogCache=catalog
     return catalog
   })()
@@ -143,7 +140,7 @@ export async function fetchManagedCategory(category:string) {
   if (!ALLOWED_CATEGORIES.has(category)) return base
   const cached=categoryCache.get(category); if (cached && cached.expires>Date.now()) return cached.products
   const expansion=await fetchCategoryExpansion(category)
-  const merged=dedupeAndBalance([...base.filter((product)=>product.category===category),...expansion,...fallbackProducts.filter((product)=>product.category===category)]).filter((product)=>product.category===category)
+  const merged=dedupeAndBalance([...base.filter((product)=>product.category===category),...expansion]).filter((product)=>product.category===category)
   categoryCache.set(category,{expires:Date.now()+CATEGORY_CACHE_TTL,products:merged}); return merged
 }
 
